@@ -1,0 +1,250 @@
+name: Release
+
+# Publishes ai-infrastructure-suite to PyPI via Trusted Publishing (OIDC).
+#
+# Safety properties:
+#   * Manual trigger only. A tag push cannot start a publish, so a release is
+#     always a deliberate act.
+#   * The build job refuses to proceed unless the tag matches the version
+#     declared in the package, so the tag and the artifact can never disagree.
+#   * The publish job is gated on the `pypi` GitHub environment, which should
+#     carry required reviewers.
+#   * `id-token: write` is granted only to the publish job.
+#   * No PyPI API token is used or referenced anywhere.
+#   * After publishing, the exact version is installed from PyPI in a clean
+#     environment and smoke-tested before the run is considered successful.
+#
+# PREREQUISITE, one time, performed by the PyPI account owner:
+#   Create a pending publisher at https://pypi.org/manage/account/publishing/
+#     PyPI project name: ai-infrastructure-suite
+#     Owner:             sekacorn
+#     Repository name:   AI-Infrastructure-Suite
+#     Workflow name:     release.yml
+#     Environment name:  pypi
+#   Without it, the publish step fails with `invalid-publisher`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (for example v0.1.0a1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  EXPECTED_DISTRIBUTION: ai-infrastructure-suite
+
+jobs:
+  build:
+    name: Build and verify ${{ inputs.tag }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Confirm the tag matches the packaged version
+        id: resolve
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag }}"
+          tag_version="${tag#v}"
+          pkg_version="$(python -c "
+          import pathlib, re
+          text = pathlib.Path('src/ai_infrastructure_suite/_version.py').read_text()
+          print(re.search(r'__version__ = \"([^\"]+)\"', text).group(1))
+          ")"
+          echo "tag=$tag  tag_version=$tag_version  package_version=$pkg_version"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::tag $tag implies version $tag_version but the package declares $pkg_version"
+            exit 1
+          fi
+          echo "version=$pkg_version" >> "$GITHUB_OUTPUT"
+
+      - name: Install build tooling
+        run: python -m pip install build twine packaging
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Twine check
+        run: twine check --strict dist/*
+
+      - name: Inspect artifact metadata
+        run: python scripts/check_metadata.py dist --version "${{ steps.resolve.outputs.version }}"
+
+      - name: Scan artifacts for personal data and secrets
+        run: python scripts/scan_artifacts.py dist
+
+      - name: Confirm dist holds exactly one distribution at one version
+        run: |
+          set -euo pipefail
+          version="${{ steps.resolve.outputs.version }}"
+          ls -1 dist
+          count="$(find dist -maxdepth 1 -type f \( -name '*.whl' -o -name '*.tar.gz' \) | wc -l)"
+          if [ "$count" -ne 2 ]; then
+            echo "::error::expected exactly one wheel and one sdist, found $count files"
+            exit 1
+          fi
+          for f in dist/*; do
+            case "$(basename "$f")" in
+              ai_infrastructure_suite-"$version"-py3-none-any.whl) ;;
+              ai_infrastructure_suite-"$version".tar.gz) ;;
+              *) echo "::error::unexpected artifact $(basename "$f")"; exit 1 ;;
+            esac
+          done
+          echo "dist contains only $EXPECTED_DISTRIBUTION $version"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-dist
+          path: dist/
+          retention-days: 7
+
+  publish:
+    name: Publish to PyPI (Trusted Publishing)
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ai-infrastructure-suite/${{ needs.build.outputs.version }}/
+    permissions:
+      id-token: write # required for OIDC; this is the only credential used
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Show what will be uploaded
+        run: ls -1 dist
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # No `password:` key. Authentication is OIDC Trusted Publishing.
+          print-hash: true
+
+  verify:
+    name: Verify the published release
+    runs-on: ubuntu-latest
+    needs: [build, publish]
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Wait for the exact version to appear on PyPI
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.version }}"
+          for attempt in $(seq 1 30); do
+            if curl -sf "https://pypi.org/pypi/$EXPECTED_DISTRIBUTION/$version/json" > /dev/null; then
+              echo "$EXPECTED_DISTRIBUTION $version is available on PyPI"
+              exit 0
+            fi
+            echo "attempt $attempt: not yet visible, waiting"
+            sleep 10
+          done
+          echo "::error::$EXPECTED_DISTRIBUTION $version did not appear on PyPI"
+          exit 1
+
+      - name: Install the published wheel in a clean environment
+        working-directory: /tmp
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.version }}"
+          python -m venv /tmp/wheelenv
+          /tmp/wheelenv/bin/pip install --only-binary :all: "$EXPECTED_DISTRIBUTION==$version"
+          /tmp/wheelenv/bin/ai-suite version
+          /tmp/wheelenv/bin/ai-suite components
+          /tmp/wheelenv/bin/ai-suite doctor --json > /tmp/doctor.json
+          /tmp/wheelenv/bin/ai-suite compatibility --json > /tmp/compat.json
+          /tmp/wheelenv/bin/ai-suite info
+          /tmp/wheelenv/bin/ai-suite extras
+          /tmp/wheelenv/bin/ai-suite manifest > /tmp/manifest.json
+
+      - name: Install the published sdist in a separate clean environment
+        working-directory: /tmp
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.version }}"
+          python -m venv /tmp/sdistenv
+          /tmp/sdistenv/bin/pip install --no-binary "$EXPECTED_DISTRIBUTION" \
+            "$EXPECTED_DISTRIBUTION==$version"
+          /tmp/sdistenv/bin/ai-suite version
+
+      - name: Confirm the published package reports the expected state
+        run: |
+          python - <<'PY'
+          import json, os, subprocess, sys
+
+          version = os.environ["EXPECTED_VERSION"]
+          report = json.load(open("/tmp/doctor.json"))
+          manifest = json.load(open("/tmp/manifest.json"))
+
+          if report["suite_version"] != version:
+              sys.exit(f"doctor reports {report['suite_version']}, expected {version}")
+          if len(report["components"]) != 7:
+              sys.exit(f"expected 7 component records, found {len(report['components'])}")
+          if len(manifest["components"]) != 7:
+              sys.exit("manifest does not describe 7 components")
+
+          # The default install must bring the five core components and nothing heavy.
+          for component in report["components"]:
+              expected = "ok" if component["installed_by_default"] else "optional"
+              if component["status"] != expected:
+                  sys.exit(
+                      f"{component['distribution']} is {component['status']}, expected {expected}"
+                  )
+
+          installed = subprocess.run(
+              ["/tmp/wheelenv/bin/pip", "list", "--format=freeze"],
+              capture_output=True, text=True, check=True,
+          ).stdout.lower()
+          for unwanted in ("fastapi", "uvicorn", "grpcio", "psycopg", "pgvector",
+                           "anthropic", "openai", "boto3", "opentelemetry"):
+              if f"{unwanted}==" in installed:
+                  sys.exit(f"default install unexpectedly pulled {unwanted}")
+
+          print("published package verified:", report["summary"])
+          PY
+        env:
+          EXPECTED_VERSION: ${{ needs.build.outputs.version }}
+
+      - name: Verify the full extra resolves all seven components
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.version }}"
+          python -m venv /tmp/fullenv
+          /tmp/fullenv/bin/pip install "$EXPECTED_DISTRIBUTION[full]==$version"
+          /tmp/fullenv/bin/ai-suite doctor --json > /tmp/full-doctor.json
+          python - <<'PY'
+          import json, sys
+          report = json.load(open("/tmp/full-doctor.json"))
+          bad = [c["distribution"] for c in report["components"] if c["status"] != "ok"]
+          if bad:
+              sys.exit(f"[full] install left these not ok: {bad}")
+          print("[full] resolved all seven components:", report["summary"])
+          PY
+
+      - name: Confirm the import comes from site-packages, not a checkout
+        run: |
+          /tmp/wheelenv/bin/python - <<'PY'
+          import ai_infrastructure_suite as pkg
+          location = pkg.__file__ or ""
+          print("module location:", location)
+          assert "site-packages" in location, f"not installed into site-packages: {location}"
+          print("import verified from site-packages")
+          PY

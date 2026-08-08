@@ -25,7 +25,7 @@ Enforced by tests in `tests/test_security.py`:
 - **No secrets, absolute paths, hostnames, or environment variables** in any output. All diagnostic strings pass through a redaction filter and are length-bounded.
 - **No unrequested file access.** The only file written is one named explicitly via `--output`.
 - **Terminal-safe output.** Rich markup is disabled and control characters are stripped, so no third-party string can drive the terminal.
-- **No publishing workflow** exists in this repository, so no credential can be exfiltrated from one.
+- **No PyPI API token** exists or is referenced. Publishing uses Trusted Publishing (OIDC), is manually triggered, and is gated on the `pypi` environment; `id-token: write` is scoped to the publish job alone.
 
 ## Known tradeoff
 

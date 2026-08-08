@@ -99,7 +99,7 @@ The suite's job is installing other people's code, so:
 - **Nothing is vendored or mirrored.** Components come from PyPI over pip's own verified path. The suite adds no index, no mirror, and no download step.
 - **No install-time code.** The build backend is `hatchling` with no custom build hooks, and the package has no `setup.py` and no post-install script.
 - **CI runs `pip-audit` and `bandit`** on every push and pull request.
-- **No publishing workflow exists**, so no credential can be exfiltrated from one and nothing can be published by accident. See [release-policy.md](release-policy.md) for the requirements any future workflow must meet.
+- **No PyPI API token** exists or is referenced anywhere. Publishing uses Trusted Publishing (OIDC), triggers only by manual dispatch, is gated on the `pypi` environment, and grants `id-token: write` to the publish job alone. See [release-policy.md](release-policy.md).
 
 ## What this package does not protect you from
 

@@ -89,15 +89,40 @@ Every release must pass, on Python 3.11, 3.12, and 3.13:
 
 ## Publishing
 
-Not automated, and deliberately so. This repository has **no workflow that can publish to PyPI**, accidentally or otherwise. CI builds artifacts and runs `twine check`; it does not upload them.
+Publishing runs through `.github/workflows/release.yml` using **PyPI Trusted Publishing (OIDC)**. No PyPI API token exists, is referenced, or is needed.
 
-A future release workflow, if added, must require:
+The workflow is built so a release is always deliberate:
 
-- An explicit version tag
-- A GitHub environment named `pypi` with required reviewers
-- **Trusted Publishing (OIDC)** — no long-lived PyPI API token
-- Manual approval before the publish step
-- Post-publish verification that the version on PyPI matches the tag exactly
+- **Manual trigger only** (`workflow_dispatch` with a tag input). A tag push cannot start a publish.
+- **Tag/version agreement is enforced.** The build job refuses to continue unless the tag resolves to the version in `_version.py`, so the tag and the artifact can never disagree.
+- **The publish job is gated on the `pypi` GitHub environment**, which should carry required reviewers so a human approves the upload.
+- **`id-token: write` is granted only to the publish job**; the rest of the workflow runs read-only.
+- **Exactly one distribution at one version** may reach the upload step; anything else fails the run.
+- **Post-publish verification** installs the exact version from PyPI in clean environments — wheel and sdist separately — runs the CLI, confirms the default install pulls nothing heavy, confirms `[full]` resolves all seven, and confirms the import resolves from `site-packages`.
+
+### One-time PyPI setup
+
+Trusted Publishing for a project that does not yet exist requires a **pending publisher**, created by the PyPI account owner at <https://pypi.org/manage/account/publishing/>:
+
+| Field | Value |
+|---|---|
+| PyPI project name | `ai-infrastructure-suite` |
+| Owner | `sekacorn` |
+| Repository name | `AI-Infrastructure-Suite` |
+| Workflow name | `release.yml` |
+| Environment name | `pypi` |
+
+Without it the publish step fails with `invalid-publisher`. This step cannot be automated: it requires an authenticated PyPI session.
+
+### Running a release
+
+```bash
+git tag v0.1.0a1 <verified-commit>
+git push origin v0.1.0a1
+gh workflow run release.yml -f tag=v0.1.0a1
+```
+
+Then approve the `pypi` environment deployment when prompted.
 
 ## Support
 

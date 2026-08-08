@@ -10,7 +10,7 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [0.1.0a1] - 2026-08-08
 
-Initial alpha. Not published to PyPI.
+Initial alpha release.
 
 ### Added
 
@@ -65,7 +65,9 @@ Initial alpha. Not published to PyPI.
 - `--no-imports` for environments where executing third-party import-time code is
   not acceptable.
 - The only file written is one the caller names explicitly via `--output`.
-- No workflow in this repository can publish to PyPI.
+- Publishing uses PyPI Trusted Publishing (OIDC) with no API token, triggers
+  only by manual dispatch, is gated on the `pypi` GitHub environment, and
+  grants `id-token: write` to the publish job alone.
 
 ### Notes
 
@@ -81,7 +83,7 @@ Initial alpha. Not published to PyPI.
   install as `incompatible`.
 - Python 3.11–3.13. The upper bound is the intersection across the ecosystem:
   four components declare `<3.14`.
-- 162 tests, none of which require the seven repositories to be checked out,
+- 165 tests, none of which require the seven repositories to be checked out,
   installed, or reachable.
 
 [Unreleased]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0a1...HEAD
