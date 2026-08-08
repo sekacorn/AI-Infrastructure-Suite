@@ -99,14 +99,21 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
+      # setup-python pre-installs a build toolchain into the runner. It is not a
+      # dependency of this package — a user's install contains only pip — but
+      # pip-audit audits the whole environment, so a stale ambient setuptools
+      # reports as a finding. Upgrade it rather than suppress the finding.
+      - name: Upgrade ambient build toolchain
+        run: python -m pip install --upgrade pip setuptools wheel
+
       - name: Install
         run: python -m pip install -e ".[dev]"
 
       - name: Bandit
-        run: bandit -c pyproject.toml -r src
+        run: bandit -c pyproject.toml -r src scripts
 
       # Not --strict: this package is not on PyPI, so pip-audit cannot audit the
-      # project itself and --strict escalates that unavoidable skip to an error.
+      # project itself, and --strict escalates that unavoidable skip to an error.
       # Plain pip-audit still exits non-zero when a real vulnerability is found.
       - name: pip-audit
         run: pip-audit
