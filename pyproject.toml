@@ -1,0 +1,176 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-infrastructure-suite"
+dynamic = ["version"]
+description = "Unified installer and compatibility layer for the Linux of AI ecosystem: portable, governed, measurable, vendor-neutral AI infrastructure."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "sekacorn" }]
+maintainers = [{ name = "sekacorn" }]
+keywords = [
+    "ai",
+    "ai-infrastructure",
+    "metapackage",
+    "agents",
+    "governance",
+    "policy-as-code",
+    "audit",
+    "finops",
+    "ontology",
+    "benchmark",
+    "vendor-neutral",
+    "local-first",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Installation/Setup",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+
+# The default install is the lightweight core: five pure-Python components whose
+# only compiled wheels are pydantic-core and cryptography. It deliberately leaves
+# out ModelSwapBench (specialised), PrivateAIStack (pulls FastAPI/Uvicorn and
+# expects Ollama, PostgreSQL, and Docker at runtime), and every OpenTelemetry,
+# hosted-provider, and pgvector extra those components merely support.
+#
+# The suite's own surface is tiny: version-range parsing plus a console UI. Both
+# are already in the core resolution, so the metapackage adds no weight of its own.
+dependencies = [
+    "packaging>=24.0",
+    "rich>=13.7",
+    "typer>=0.12",
+    "agentforge-oss>=0.5.3,<0.6.0",
+    "agentpolicypack>=0.1.0a2,<0.2.0",
+    "aiauditlog>=0.1.0a4,<0.2.0",
+    "openontologylite>=0.1.0a4,<0.2.0",
+    "aimeter-oss>=0.1.0a5,<0.2.0",
+]
+
+[project.optional-dependencies]
+# Grouping intent only. These five distributions are already part of the default
+# install; the extra exists so `[governance]` is a valid, documented request.
+governance = [
+    "agentpolicypack>=0.1.0a2,<0.2.0",
+    "aiauditlog>=0.1.0a4,<0.2.0",
+    "openontologylite>=0.1.0a4,<0.2.0",
+]
+benchmarking = [
+    "modelswapbench>=0.1.0a6,<0.2.0",
+]
+local = [
+    "privateaistack>=0.1.0a3,<0.2.0",
+]
+observability = [
+    "aimeter-oss[otel]>=0.1.0a5,<0.2.0",
+    "agentforge-oss[otel]>=0.5.3,<0.6.0",
+]
+full = [
+    "agentforge-oss>=0.5.3,<0.6.0",
+    "agentpolicypack>=0.1.0a2,<0.2.0",
+    "aiauditlog>=0.1.0a4,<0.2.0",
+    "openontologylite>=0.1.0a4,<0.2.0",
+    "aimeter-oss>=0.1.0a5,<0.2.0",
+    "modelswapbench>=0.1.0a6,<0.2.0",
+    "privateaistack>=0.1.0a3,<0.2.0",
+]
+dev = [
+    "bandit[toml]>=1.7",
+    "build>=1.2",
+    "mypy>=1.10",
+    "pip-audit>=2.7",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "twine>=5.1",
+]
+
+[project.scripts]
+ai-suite = "ai_infrastructure_suite.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sekacorn/AI-Infrastructure-Suite"
+Repository = "https://github.com/sekacorn/AI-Infrastructure-Suite"
+Issues = "https://github.com/sekacorn/AI-Infrastructure-Suite/issues"
+Changelog = "https://github.com/sekacorn/AI-Infrastructure-Suite/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/sekacorn/AI-Infrastructure-Suite/tree/main/docs"
+
+[tool.hatch.version]
+path = "src/ai_infrastructure_suite/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_infrastructure_suite"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/scripts",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
+    "/SECURITY.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+exclude = [
+    "/dist",
+    "/build",
+    "/.venv",
+    "/.pytest_cache",
+    "/.ruff_cache",
+    "/.mypy_cache",
+    "**/__pycache__/**",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "C4", "SIM", "RUF", "ARG", "PTH"]
+ignore = ["S101"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "ARG"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ai_infrastructure_suite"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+packages = ["ai_infrastructure_suite"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["ai_infrastructure_suite"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "dist", "build"]

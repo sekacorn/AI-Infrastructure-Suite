@@ -1,0 +1,48 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+
+# Virtual environments
+.venv/
+venv/
+env/
+.venv-*/
+
+# Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Local reports and scratch output
+reports/
+*.log
+*.tmp
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.*
+
+# Local databases and generated data
+*.db
+*.sqlite
+*.sqlite3
+*.jsonl
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
