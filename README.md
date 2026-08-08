@@ -284,6 +284,21 @@ The manifest records `latest_published_version` alongside `minimum_version` so y
 
 ---
 
+## Current limitations
+
+Stated plainly, because an installer that overstates what it verified is worse than none:
+
+- **Alpha, and so is the ecosystem.** Both this package and all seven components are alpha. APIs, schemas, and version ranges may change before 1.0.
+- **Installed does not mean working.** The import layer proves a module loads and exposes its expected names, not that any workflow succeeds.
+- **The CLI layer reads metadata only.** A registered console script that crashes on startup still reports `ok` — nothing is executed.
+- **Live runtime integration is never tested here.** See the table above.
+- **Ranges are calibrated, not guaranteed.** A component could publish a patch inside its range that breaks something. The upper bound at the next minor limits blast radius; it does not eliminate it.
+- **The suite does not audit the components.** It checks presence, version, and importability. Their security posture is their own.
+- **No integrity verification beyond pip's.** No signature checking and no hash pinning. Use a lockfile with hashes if you need that.
+- **Import checks execute third-party code.** That is the only way to distinguish installed from usable. Use `--no-imports` where that is unacceptable.
+- **Python 3.14 is not supported yet**, because four components declare `<3.14`. The cap lifts when they do.
+- **`ai-suite` diagnoses; it does not repair.** It prints the command to run and leaves the decision to you.
+
 ## Security
 
 The diagnostics are built to be safe to run and safe to paste into an issue:
