@@ -50,12 +50,12 @@ See [extras.md](extras.md) for what each group pulls in and why the split is dra
 
 ## Pre-release resolution
 
-Six of the seven components are published as alpha releases. Under [PEP 440](https://peps.python.org/pep-0440/), pip normally ignores pre-releases — but a requirement whose specifier *contains* a pre-release makes pip consider pre-releases for that requirement.
+Six of the seven components are published as pre-releases (beta). Under [PEP 440](https://peps.python.org/pep-0440/), pip normally ignores pre-releases — but a requirement whose specifier *contains* a pre-release makes pip consider pre-releases for that requirement.
 
-Every alpha component is pinned with an alpha lower bound (`>=0.1.0a4,<0.2.0`), so:
+Every component is pinned with a pre-release-aware range. The current Beta components use a beta lower bound and a next-minor upper bound above the whole line (`>=0.2.0b1,<0.3.0`), so:
 
 ```bash
-pip install ai-infrastructure-suite      # resolves the alphas correctly
+pip install ai-infrastructure-suite      # resolves the Beta components correctly
 ```
 
 **No `--pre` flag is needed**, and you are not opting into pre-releases for unrelated packages in your environment.

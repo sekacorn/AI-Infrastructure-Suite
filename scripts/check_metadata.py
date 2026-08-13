@@ -14,7 +14,7 @@ Checks the wheel's METADATA and the sdist's PKG-INFO for:
 * the ``py.typed`` marker.
 
 Usage:
-    python scripts/check_metadata.py [dist_dir] [--version 0.1.0a1]
+    python scripts/check_metadata.py [dist_dir] [--version 0.1.0b1]
 """
 
 from __future__ import annotations
@@ -146,7 +146,7 @@ def check_sdist(sdist: pathlib.Path, version: str, problems: list[str]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dist", nargs="?", default="dist")
-    parser.add_argument("--version", default="0.1.0a1")
+    parser.add_argument("--version", default="0.1.0b1")
     args = parser.parse_args()
 
     dist = pathlib.Path(args.dist)

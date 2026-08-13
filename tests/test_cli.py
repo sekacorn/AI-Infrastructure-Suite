@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 
 from ai_infrastructure_suite._version import __version__
 from ai_infrastructure_suite.cli import ExitCode, app
+from ai_infrastructure_suite.components import load_manifest
 
 runner = CliRunner()
 
@@ -82,7 +83,9 @@ class TestComponents:
         monkeypatch.setenv("COLUMNS", "240")
         output = runner.invoke(app, ["components"]).output
         assert "agentforge-oss" in output
-        assert ">=0.5.3,<0.6.0" in output
+        # The displayed range tracks the manifest rather than a hard-coded string.
+        agentforge = load_manifest().component("agentforge")
+        assert agentforge.version_specifier in output
         assert "model_swap_bench" in output
 
     def test_json_is_parseable_and_complete(self) -> None:

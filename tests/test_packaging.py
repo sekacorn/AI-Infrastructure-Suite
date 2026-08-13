@@ -44,7 +44,7 @@ class TestDistributionMetadata:
         assert metadata.version(DISTRIBUTION) == __version__
 
     def test_version_is_the_expected_alpha(self) -> None:
-        assert __version__ == "0.1.0a1"
+        assert __version__ == "0.1.0b1"
 
     def test_author_is_the_public_identity(self) -> None:
         raw = metadata.metadata(DISTRIBUTION)

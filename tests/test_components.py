@@ -77,6 +77,25 @@ class TestPackagedManifest:
         for component in ecosystem_components():
             assert component.specifier_set.contains(component.minimum_version, prereleases=True)
 
+    def test_prerelease_upper_bound_admits_the_beta_and_its_final(self) -> None:
+        # Regression guard for the PEP 440 boundary trap: an exclusive ``<V`` never
+        # matches a pre-release of ``V`` itself, so a range like ``>=0.2.0b1,<0.2.0``
+        # would exclude the very beta it targets. The upper bound must sit above the
+        # whole pre-release line, admitting both the beta and its eventual final.
+        for component in ecosystem_components():
+            latest = Version(component.latest_published_version)
+            if not latest.is_prerelease:
+                continue
+            spec = component.specifier_set
+            final_of_line = Version(component.minimum_version).base_version
+            assert spec.contains(str(latest), prereleases=True), (
+                f"{component.distribution} range excludes its beta {latest}"
+            )
+            assert spec.contains(final_of_line, prereleases=True), (
+                f"{component.distribution} range excludes the {final_of_line} final; "
+                "the upper bound is at the beta's own minor and would strand users on the beta"
+            )
+
     def test_five_components_install_by_default(self) -> None:
         default = [item.id for item in ecosystem_components() if item.installed_by_default]
         assert default == [

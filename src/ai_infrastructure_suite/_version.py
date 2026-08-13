@@ -6,4 +6,4 @@ re-exports it so ``ai_infrastructure_suite.__version__`` works at runtime
 without an ``importlib.metadata`` lookup.
 """
 
-__version__ = "0.1.0a1"
+__version__ = "0.1.0b1"

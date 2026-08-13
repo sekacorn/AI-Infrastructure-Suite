@@ -8,6 +8,40 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.1.0b1] - 2026-08-13
+
+First Beta candidate for the suite itself. The seven components it installs are
+all Beta, and the suite now resolves those published Beta releases correctly. The
+default install stays lightweight (five packages); `[full]` installs all seven.
+Python support is `>=3.11,<3.14`.
+
+"Compatible" here means the suite verifies **installation**, **import**, **CLI
+presence**, and **offline-contract** conventions. It does **not** mean the seven
+packages have been proven to operate together as one live runtime — the
+`live_runtime` compatibility layer remains `not_checked`.
+
+### Changed
+
+- **Track the Beta ecosystem.** All seven components have reached Beta, so the
+  dependency ranges and the packaged manifest now target the published Beta
+  versions: agentforge-oss `>=0.5.4,<0.6.0`, agentpolicypack / aiauditlog /
+  aimeter-oss / privateaistack `>=0.2.0b1,<0.3.0`, openontologylite
+  `>=0.2.0b2,<0.3.0`, and modelswapbench `>=0.1.0b1,<0.2.0`.
+- **Fix pre-release upper bounds.** The previous `<0.2.0` upper bounds silently
+  **excluded** the `0.2.0bN` betas — under PEP 440 an exclusive `<V` does not
+  match a pre-release of `V` itself, so `pip install ai-infrastructure-suite`
+  would have resolved the old alphas instead of the current Beta releases. The
+  upper bound now sits at the next minor above the whole pre-release line
+  (`<0.3.0`), which admits the beta, the eventual final, and every patch.
+- Refresh the `latest_published_version` and `version_sources_verified_on`
+  manifest fields, and add `evaluate_gate` / `GateThresholds` to the ModelSwapBench
+  API-symbol checks now that its floor is `0.1.0b1`.
+- Pin the PyPI Trusted Publishing action to `pypa/gh-action-pypi-publish` v1.14.2
+  (`dc37677b2e1c63e2034f94d8a5b11f265b73ba33`) for Twine 7 / Core Metadata 2.5
+  compatibility. OIDC configuration is unchanged; no API token is used.
+
+This raises the suite's own Development Status classifier to `4 - Beta`.
+
 ## [0.1.0a1] - 2026-08-08
 
 Initial alpha release.
@@ -86,5 +120,6 @@ Initial alpha release.
 - 165 tests, none of which require the seven repositories to be checked out,
   installed, or reachable.
 
-[Unreleased]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0a1...HEAD
+[Unreleased]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0b1...HEAD
+[0.1.0b1]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0a1...v0.1.0b1
 [0.1.0a1]: https://github.com/sekacorn/AI-Infrastructure-Suite/releases/tag/v0.1.0a1

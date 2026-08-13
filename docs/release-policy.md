@@ -2,7 +2,7 @@
 
 ## Versioning
 
-The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0a1`.
+The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b1` (Beta candidate).
 
 While the suite is `0.x`, the manifest schema, JSON report schemas, and Python API may change between minor versions. Both schemas carry their own `schema_version` so consumers can detect a change rather than discover it.
 
@@ -12,13 +12,13 @@ Every component is pinned to a **compatible range**, never an exact version:
 
 | Component | Range | Minimum supported | Latest published |
 |---|---|---|---|
-| `agentforge-oss` | `>=0.5.3,<0.6.0` | 0.5.3 | 0.5.3 |
-| `agentpolicypack` | `>=0.1.0a2,<0.2.0` | 0.1.0a2 | 0.1.0a2 |
-| `aiauditlog` | `>=0.1.0a4,<0.2.0` | 0.1.0a4 | 0.1.0a4 |
-| `openontologylite` | `>=0.1.0a4,<0.2.0` | 0.1.0a4 | 0.1.0a4 |
-| `aimeter-oss` | `>=0.1.0a5,<0.2.0` | 0.1.0a5 | 0.1.0a5 |
-| `modelswapbench` | `>=0.1.0a6,<0.2.0` | 0.1.0a6 | **0.1.0a7** |
-| `privateaistack` | `>=0.1.0a3,<0.2.0` | 0.1.0a3 | 0.1.0a3 |
+| `agentforge-oss` | `>=0.5.4,<0.6.0` | 0.5.4 | 0.5.4 |
+| `agentpolicypack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
+| `aiauditlog` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
+| `openontologylite` | `>=0.2.0b2,<0.3.0` | 0.2.0b2 | 0.2.0b2 |
+| `aimeter-oss` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
+| `modelswapbench` | `>=0.1.0b1,<0.2.0` | 0.1.0b1 | 0.1.0b1 |
+| `privateaistack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
 
 Verified against PyPI on the date in the manifest's `version_sources_verified_on`.
 
@@ -34,13 +34,13 @@ This is a live concern, not a hypothetical. While this package was being built, 
 
 **2. The upper bound is the next minor.**
 
-`<0.6.0` and `<0.2.0` let patch and minor releases flow through without a suite release. On an alpha component, `<0.2.0` admits `0.1.0a7`, the `0.1.0` final, and every `0.1.x`.
+`<0.6.0` and `<0.2.0` let patch and minor releases flow through without a suite release. For a `0.2.0bN` beta line the next-minor bound is `<0.3.0`, which admits `0.2.0b1`, the `0.2.0` final, and every `0.2.x`. Note `<0.2.0` would exclude `0.2.0b1`: under PEP 440 an exclusive `<V` never matches a pre-release of `V` itself.
 
 This bounds blast radius without freezing users out of fixes. It does not guarantee that a release inside the range is safe; it limits how far a surprise can travel.
 
-**3. Alpha lower bounds are deliberate.**
+**3. Pre-release lower bounds are deliberate.**
 
-Under PEP 440, pip ignores pre-releases unless the specifier itself contains one. Because every alpha component is pinned with an alpha lower bound, `pip install ai-infrastructure-suite` resolves them correctly with **no `--pre` flag** — and without opting the rest of the environment into pre-releases.
+Under PEP 440, pip ignores pre-releases unless the specifier itself contains one. Because each current Beta component is pinned with a beta lower bound, `pip install ai-infrastructure-suite` resolves them correctly with **no `--pre` flag** — and without opting the rest of the environment into pre-releases.
 
 ### Recording the calibration
 
@@ -117,9 +117,9 @@ Without it the publish step fails with `invalid-publisher`. This step cannot be 
 ### Running a release
 
 ```bash
-git tag v0.1.0a1 <verified-commit>
-git push origin v0.1.0a1
-gh workflow run release.yml -f tag=v0.1.0a1
+git tag v0.1.0b1 <verified-commit>
+git push origin v0.1.0b1
+gh workflow run release.yml -f tag=v0.1.0b1
 ```
 
 Then approve the `pypi` environment deployment when prompted.
@@ -128,4 +128,4 @@ Then approve the `pypi` environment deployment when prompted.
 
 - **Python:** 3.11–3.13. The upper bound is the intersection across the ecosystem: four components declare `<3.14`. It will lift when they do.
 - **Platforms:** Linux, macOS, and Windows. The suite is pure Python; the only compiled wheels in the default resolution are `pydantic-core` and `cryptography`.
-- **Alpha caveat:** both the suite and the ecosystem are alpha. APIs and schemas may still change.
+- **Maturity caveat:** the seven components and this suite (`0.1.0b1` Beta candidate) have reached Beta. APIs and schemas may still change before 1.0.

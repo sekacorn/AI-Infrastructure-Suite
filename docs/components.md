@@ -31,7 +31,7 @@ Note that distribution names and import names differ for most components — `pi
 
 ## AgentForge
 
-**`agentforge-oss`** · imports as `forge` · CLI `forge` · range `>=0.5.3,<0.6.0`
+**`agentforge-oss`** · imports as `forge` · CLI `forge` · range `>=0.5.4,<0.6.0`
 
 Async-first multi-agent orchestration. A supervisor decomposes a goal, spawns worker agents that run concurrently in bounded batches, and synthesises the results. Model routing picks between registered models by `cost_optimized`, `quality_first`, `balanced`, or `fixed` strategy. Budgets are enforced twice: a pessimistic pre-flight estimate before a worker batch starts, and a precise check after every model call.
 
@@ -47,7 +47,7 @@ Also ships tool sandboxing with dangerous tools denied by default, RBAC, prompt-
 
 ## AgentPolicyPack
 
-**`agentpolicypack`** · imports as `agent_policy_pack` · CLI `agentpolicy` · range `>=0.1.0a2,<0.2.0`
+**`agentpolicypack`** · imports as `agent_policy_pack` · CLI `agentpolicy` · range `>=0.2.0b1,<0.3.0`
 
 Policy-as-code for agent actions. Bundles are YAML or JSON, loaded with duplicate-key-rejecting parsers into frozen Pydantic models that refuse unknown fields. Evaluation is deterministic: target matching, then bounded structured conditions, then conflict resolution (`deny_overrides` by default), then obligation and most-restrictive-limit aggregation.
 
@@ -63,7 +63,7 @@ Invalid bundles fail closed — `indeterminate` with a deny-equivalent outcome. 
 
 ## AIAuditLog
 
-**`aiauditlog`** · imports as `ai_audit_log` · CLI `aiaudit` · range `>=0.1.0a4,<0.2.0`
+**`aiauditlog`** · imports as `ai_audit_log` · CLI `aiaudit` · range `>=0.2.0b1,<0.3.0`
 
 A vendor-neutral typed audit-event envelope plus local recording, verification, privacy, and signing tools. Canonical bytes use RFC 8785 after normalising decimals, dates, and model objects. Events are SHA-256 digested and optionally hash-chained; checkpoints bind stream identity, event count, and terminal digest, and can carry Ed25519 signatures.
 
@@ -79,7 +79,7 @@ Privacy profiles default to `minimal`: identifiers, hashes, counts, and outcomes
 
 ## AIMeter
 
-**`aimeter-oss`** · imports as `ai_meter` · CLI `aimeter` · range `>=0.1.0a5,<0.2.0`
+**`aimeter-oss`** · imports as `ai_meter` · CLI `aimeter` · range `>=0.2.0b1,<0.3.0`
 
 Measurement and accounting for AI usage, provider and infrastructure cost, allocation, outcomes, budgets, and reconciliation. All money is `Decimal` with stable six-place strings. Pricing tables resolve by provider, model, region, currency, and effective date, and report exact, fallback, ambiguous, missing, stale, or expired status.
 
@@ -97,7 +97,7 @@ Previously published as `openaimeter`; `aimeter-oss` / `ai_meter` is current, wi
 
 ## OpenOntologyLite
 
-**`openontologylite`** · imports as `open_ontology_lite` · CLI `openontology` · range `>=0.1.0a4,<0.2.0`
+**`openontologylite`** · imports as `open_ontology_lite` · CLI `openontology` · range `>=0.2.0b2,<0.3.0`
 
 Portable semantic contracts: typed entities and properties, relationships with cardinality, action contracts with inputs and preconditions, and permissions with risk. Loading is local-only and defensive — safe YAML, duplicate-key rejection, 2 MB file cap, 40 nesting levels, 100,000 node ceiling, and diagnostics that omit raw input values.
 
@@ -113,7 +113,7 @@ Also defines **AI System Maps**: a declarative record of workload purpose, task 
 
 ## ModelSwapBench
 
-**`modelswapbench`** · imports as `model_swap_bench` · CLI `modelswapbench` · range `>=0.1.0a6,<0.2.0` · extra `[benchmarking]`
+**`modelswapbench`** · imports as `model_swap_bench` · CLI `modelswapbench` · range `>=0.1.0b1,<0.2.0` · extra `[benchmarking]`
 
 Repeatable model portability and replacement benchmarking. Suites are strict YAML or JSON defining model candidates, cases, evaluators, constraints, and replacement rules. Evaluators cover exact and substring matching, regex, JSON parsing and schema, field match, tool selection, policy expectations, citations, latency, cost, and a keyword rubric.
 
@@ -131,7 +131,7 @@ Produces replacement recommendations gated on quality drop, success-rate drop, r
 
 ## PrivateAIStack
 
-**`privateaistack`** · imports as `private_ai_stack` · CLI `privateaistack` · range `>=0.1.0a3,<0.2.0` · extra `[local]`
+**`privateaistack`** · imports as `private_ai_stack` · CLI `privateaistack` · range `>=0.2.0b1,<0.3.0` · extra `[local]`
 
 A local-first FastAPI service and Docker Compose deployment template combining Ollama, Forge orchestration, PostgreSQL-backed document memory, governed static code review, JSONL audit records, and optional OpenTelemetry.
 

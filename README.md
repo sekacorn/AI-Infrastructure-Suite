@@ -6,7 +6,7 @@
 
 It contains **none of the seven projects' business logic**. It installs them, describes them, and diagnoses them. Each component remains independently installable and independently useful.
 
-> **Status:** `0.1.0a1`, alpha. The ecosystem it installs is alpha too. Version ranges may tighten before 1.0.
+> **Status:** `0.1.0b1` **Beta candidate** (not yet published). The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
 
 > **Independent project.** Linux of AI and AI Infrastructure Suite are independent open-source projects. They are **not affiliated with, endorsed by, or sponsored by the Linux Foundation**. "Linux of AI" is used as a descriptive name for an open, portable infrastructure ecosystem. This package is not an operating system, not a kernel, and not a replacement for either.
 
@@ -138,13 +138,13 @@ ai-suite manifest         # emit the ecosystem manifest as JSON
 ┌──────────────────┬──────────────────┬────────────────────┬────────────────┬──────────────┬─────────────────┬───────────┬──────────┐
 │ Component        │ Distribution     │ Import             │ CLI            │ Layer        │ Supported range │ Installed │ Status   │
 ├──────────────────┼──────────────────┼────────────────────┼────────────────┼──────────────┼─────────────────┼───────────┼──────────┤
-│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.3,<0.6.0  │ 0.5.3     │ ok       │
-│ AgentPolicyPack  │ agentpolicypack  │ agent_policy_pack  │ agentpolicy    │ core         │ >=0.1.0a2,<0.2.0│ 0.1.0a2   │ ok       │
-│ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.1.0a4,<0.2.0│ 0.1.0a4   │ ok       │
-│ AIMeter          │ aimeter-oss      │ ai_meter           │ aimeter        │ core         │ >=0.1.0a5,<0.2.0│ 0.1.0a5   │ ok       │
-│ ModelSwapBench   │ modelswapbench   │ model_swap_bench   │ modelswapbench │ benchmarking │ >=0.1.0a6,<0.2.0│ -         │ optional │
-│ OpenOntologyLite │ openontologylite │ open_ontology_lite │ openontology   │ core         │ >=0.1.0a4,<0.2.0│ 0.1.0a4   │ ok       │
-│ PrivateAIStack   │ privateaistack   │ private_ai_stack   │ privateaistack │ local        │ >=0.1.0a3,<0.2.0│ -         │ optional │
+│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.4,<0.6.0  │ 0.5.4     │ ok       │
+│ AgentPolicyPack  │ agentpolicypack  │ agent_policy_pack  │ agentpolicy    │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
+│ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
+│ AIMeter          │ aimeter-oss      │ ai_meter           │ aimeter        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
+│ ModelSwapBench   │ modelswapbench   │ model_swap_bench   │ modelswapbench │ benchmarking │ >=0.1.0b1,<0.2.0│ -         │ optional │
+│ OpenOntologyLite │ openontologylite │ open_ontology_lite │ openontology   │ core         │ >=0.2.0b2,<0.3.0│ 0.2.0b2   │ ok       │
+│ PrivateAIStack   │ privateaistack   │ private_ai_stack   │ privateaistack │ local        │ >=0.2.0b1,<0.3.0│ -         │ optional │
 └──────────────────┴──────────────────┴────────────────────┴────────────────┴──────────────┴─────────────────┴───────────┴──────────┘
 ```
 
@@ -156,8 +156,8 @@ Each component gets five independently classified checks — install, import, AP
 ┌──────────────────┬───────────┬──────────┬─────────────┬─────────────┬─────────────┬──────────┐
 │ Component        │ Installed │ Install  │ Import      │ API         │ CLI         │ Status   │
 ├──────────────────┼───────────┼──────────┼─────────────┼─────────────┼─────────────┼──────────┤
-│ AgentForge       │ 0.5.3     │ ok       │ ok          │ ok          │ ok          │ ok       │
-│ AgentPolicyPack  │ 0.1.0a2   │ ok       │ ok          │ ok          │ ok          │ ok       │
+│ AgentForge       │ 0.5.4     │ ok       │ ok          │ ok          │ ok          │ ok       │
+│ AgentPolicyPack  │ 0.2.0b1   │ ok       │ ok          │ ok          │ ok          │ ok       │
 │ ModelSwapBench   │ -         │ optional │ not_checked │ not_checked │ not_checked │ optional │
 └──────────────────┴───────────┴──────────┴─────────────┴─────────────┴─────────────┴──────────┘
 ```
@@ -265,20 +265,20 @@ Worth knowing about the ecosystem itself, since the suite does not paper over it
 Every component is pinned to a **compatible range**, never an exact version:
 
 ```
-agentforge-oss    >=0.5.3,<0.6.0
-agentpolicypack   >=0.1.0a2,<0.2.0
-aiauditlog        >=0.1.0a4,<0.2.0
-openontologylite  >=0.1.0a4,<0.2.0
-aimeter-oss       >=0.1.0a5,<0.2.0
-modelswapbench    >=0.1.0a6,<0.2.0
-privateaistack    >=0.1.0a3,<0.2.0
+agentforge-oss    >=0.5.4,<0.6.0
+agentpolicypack   >=0.2.0b1,<0.3.0
+aiauditlog        >=0.2.0b1,<0.3.0
+openontologylite  >=0.2.0b2,<0.3.0
+aimeter-oss       >=0.2.0b1,<0.3.0
+modelswapbench    >=0.1.0b1,<0.2.0
+privateaistack    >=0.2.0b1,<0.3.0
 ```
 
 Three rules govern these:
 
 1. **Lower bound = the latest version actually published**, verified against PyPI, not the latest version that exists in a source tree. A range that selects an unreleased version makes the metapackage uninstallable.
-2. **Upper bound = the next minor**, so patch and minor releases flow through without a suite release. `<0.2.0` on an alpha permits `0.1.0a7`, `0.1.0`, and every `0.1.x`.
-3. **Alpha lower bounds are deliberate.** A specifier containing a pre-release makes pip consider pre-releases for that requirement, so `pip install ai-infrastructure-suite` resolves the alphas without anyone passing `--pre`.
+2. **Upper bound = the next minor after the pre-release line**, so patch, minor, and the eventual final release in that line flow through without a suite release. For the `0.2.0bN` betas the bound is `<0.3.0`, which admits `0.2.0b1`, `0.2.0`, and every `0.2.x`. Note that a bound like `<0.2.0` would **exclude** `0.2.0b1`: under PEP 440 an exclusive `<V` does not match a pre-release of `V` itself, so the next-minor bound must sit above the whole line.
+3. **Pre-release lower bounds are deliberate.** A specifier containing a pre-release makes pip consider pre-releases for that requirement, so `pip install ai-infrastructure-suite` resolves the current Beta components without anyone passing `--pre`.
 
 The manifest records `latest_published_version` alongside `minimum_version` so you can always tell what the range was calibrated against, and `version_sources_verified_on` records when. See [docs/release-policy.md](docs/release-policy.md).
 
@@ -288,7 +288,7 @@ The manifest records `latest_published_version` alongside `minimum_version` so y
 
 Stated plainly, because an installer that overstates what it verified is worse than none:
 
-- **Alpha, and so is the ecosystem.** Both this package and all seven components are alpha. APIs, schemas, and version ranges may change before 1.0.
+- **Beta, not 1.0.** All seven components have reached Beta, and this metapackage is a `0.1.0b1` Beta candidate. APIs, schemas, and version ranges may still change before 1.0.
 - **Installed does not mean working.** The import layer proves a module loads and exposes its expected names, not that any workflow succeeds.
 - **The CLI layer reads metadata only.** A registered console script that crashes on startup still reports `ok` — nothing is executed.
 - **Live runtime integration is never tested here.** See the table above.

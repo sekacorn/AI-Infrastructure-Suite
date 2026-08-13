@@ -91,7 +91,7 @@ ai-suite doctor --json
 ```json
 {
   "schema_version": "1.0",
-  "suite_version": "0.1.0a1",
+  "suite_version": "0.1.0b1",
   "manifest_schema_version": "1.0",
   "environment": {
     "python_version": "3.13.12",
@@ -120,10 +120,10 @@ ai-suite doctor --json
       "installed_by_default": true,
       "extras": ["full", "observability"],
       "purpose": "Async multi-agent orchestration ...",
-      "required_specifier": ">=0.5.3,<0.6.0",
-      "minimum_version": "0.5.3",
-      "latest_published_version": "0.5.3",
-      "installed_version": "0.5.3",
+      "required_specifier": ">=0.5.4,<0.6.0",
+      "minimum_version": "0.5.4",
+      "latest_published_version": "0.5.4",
+      "installed_version": "0.5.4",
       "status": "ok",
       "install_status": "ok",
       "import_status": "ok",
