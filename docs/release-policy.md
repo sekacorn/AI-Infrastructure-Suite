@@ -2,7 +2,7 @@
 
 ## Versioning
 
-The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b1` (Beta candidate).
+The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b1` (published Beta release).
 
 While the suite is `0.x`, the manifest schema, JSON report schemas, and Python API may change between minor versions. Both schemas carry their own `schema_version` so consumers can detect a change rather than discover it.
 
@@ -128,4 +128,4 @@ Then approve the `pypi` environment deployment when prompted.
 
 - **Python:** 3.11–3.13. The upper bound is the intersection across the ecosystem: four components declare `<3.14`. It will lift when they do.
 - **Platforms:** Linux, macOS, and Windows. The suite is pure Python; the only compiled wheels in the default resolution are `pydantic-core` and `cryptography`.
-- **Maturity caveat:** the seven components and this suite (`0.1.0b1` Beta candidate) have reached Beta. APIs and schemas may still change before 1.0.
+- **Maturity caveat:** the seven components and this suite (`0.1.0b1` published Beta release) have reached Beta. APIs and schemas may still change before 1.0.
