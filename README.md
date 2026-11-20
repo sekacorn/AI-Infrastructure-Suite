@@ -115,6 +115,8 @@ Use the metapackage when you want one coherent, version-checked environment. Use
 
 ## CLI
 
+Run `ai-suite exit-report docs/examples/exit-report/manifest.json` to inventory a project's vendor-exit evidence. Add `--json` for machine-readable output. The offline report checks referenced file digests and lists installed components. [Rubric and example outputs](docs/exit-report.md).
+
 ```bash
 ai-suite info             # what this is, extras, next steps
 ai-suite components       # the seven components and their installed state

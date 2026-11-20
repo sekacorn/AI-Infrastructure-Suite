@@ -1,0 +1,20 @@
+{
+  "schema_version": "exit-manifest.v1",
+  "vectors": {
+    "prompts": {
+      "state": "exported",
+      "path": "prompt.txt",
+      "sha256": "6b3e348bd817416829cea5f76243e36af89c468d839bd3ab171c684d9ebea739"
+    },
+    "ontology": {
+      "state": "importer_validated",
+      "path": "ontology.jsonld",
+      "sha256": "2566d8677a8f0cbca68f2e94f534baaaac6c0f85ed622f90b6b8de038cf90e78"
+    },
+    "contract_terms": {
+      "state": "attested",
+      "path": "contract-terms.json",
+      "sha256": "0214654c8f2b9c90eef14e1e89bd953334239c3334ebeb4964e5bee3334c942f"
+    }
+  }
+}

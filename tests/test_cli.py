@@ -24,6 +24,7 @@ class TestHelp:
         assert result.exit_code == 0
         for command in (
             "version",
+            "exit-report",
             "components",
             "doctor",
             "compatibility",
@@ -38,7 +39,16 @@ class TestHelp:
 
     @pytest.mark.parametrize(
         "command",
-        ["version", "components", "doctor", "compatibility", "info", "manifest", "extras"],
+        [
+            "version",
+            "exit-report",
+            "components",
+            "doctor",
+            "compatibility",
+            "info",
+            "manifest",
+            "extras",
+        ],
     )
     def test_each_command_has_help(self, command: str) -> None:
         result = runner.invoke(app, [command, "--help"])

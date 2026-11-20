@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {"const": "contract-terms-checklist.v1"},
+    "checklist": {
+      "type": "object",
+      "properties": {
+        "data_export_rights": {"enum": ["confirmed", "limited", "absent", "unknown"]},
+        "fine_tune_adapter_ownership": {"enum": ["confirmed", "limited", "absent", "unknown"]},
+        "egress_fees": {"enum": ["confirmed", "limited", "absent", "unknown"]},
+        "termination_assistance": {"enum": ["confirmed", "limited", "absent", "unknown"]}
+      },
+      "required": [
+        "data_export_rights",
+        "fine_tune_adapter_ownership",
+        "egress_fees",
+        "termination_assistance"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["schema_version", "checklist"],
+  "additionalProperties": false
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "exit-manifest.v1"
+    },
+    "vectors": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "policies",
+          "prompts",
+          "embeddings",
+          "fine_tunes",
+          "memory",
+          "audit_history",
+          "cost_history",
+          "tool_connectors",
+          "identities",
+          "ontology",
+          "contract_terms"
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "enum": [
+              "restore_tested",
+              "importer_validated",
+              "exported",
+              "reconstruction",
+              "non_exportable",
+              "inapplicable",
+              "attested"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 240,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "state",
+          "path",
+          "sha256"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "vectors"
+  ],
+  "additionalProperties": false
+}
