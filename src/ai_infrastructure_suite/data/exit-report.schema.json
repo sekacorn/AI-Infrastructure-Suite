@@ -118,6 +118,7 @@
             "state": {
               "enum": [
                 "restore_tested",
+                "restore_failed",
                 "importer_validated",
                 "exported",
                 "reconstruction",
@@ -140,7 +141,7 @@
               "type": "string"
             },
             "verification_level": {
-              "enum": ["verified", "attested"]
+              "enum": ["verified", "verified (fake profiles)", "attested"]
             },
             "path": {
               "type": "string",
@@ -174,6 +175,22 @@
                 "properties": {
                   "score": {
                     "const": 0
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "restore_failed"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 100
                   }
                 }
               }

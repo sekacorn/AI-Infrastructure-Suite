@@ -162,7 +162,7 @@ def _contract_terms_reference(root: Path, entry: object) -> dict[str, Any]:
     }
 
 
-def build_exit_report(manifest: Path) -> dict[str, Any]:
+def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[str, Any]:
     """Check local evidence digests and record installed component versions."""
     raw = _read(manifest, 65536)
     document = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique)
@@ -176,6 +176,7 @@ def build_exit_report(manifest: Path) -> dict[str, Any]:
     if not isinstance(entries, dict) or entries.keys() - set(VECTORS):
         raise ValueError("Invalid vector inventory.")
     rows = {}
+    restore_cache: dict[tuple[str, str], Any] = {}
     for vector in VECTORS:
         if vector not in entries:
             rows[vector] = {
@@ -183,6 +184,36 @@ def build_exit_report(manifest: Path) -> dict[str, Any]:
                 "score": 100,
                 "verification_level": "unverified",
                 "reason": "No evidence supplied.",
+            }
+        elif isinstance(entries[vector], dict) and entries[vector].get("state") == "restore_tested":
+            reference = _reference(manifest.parent, entries[vector])
+            if not verify_restores:
+                rows[vector] = reference
+                continue
+            if vector not in {
+                "policies",
+                "prompts",
+                "embeddings",
+                "memory",
+                "audit_history",
+                "cost_history",
+                "ontology",
+            }:
+                raise ValueError("Restore verification does not cover this vector.")
+            from ai_infrastructure_suite.restore_verification import verify_restore_summary
+
+            key = (reference["path"], reference["sha256"])
+            verification = restore_cache.get(key)
+            if verification is None:
+                verification = verify_restore_summary(manifest.parent / reference["path"])
+                restore_cache[key] = verification
+            passed = verification.passed(vector)
+            rows[vector] = {
+                **reference,
+                "state": "restore_tested" if passed else "restore_failed",
+                "score": 0 if passed else 100,
+                "verification_level": "verified (fake profiles)",
+                "reason": verification.reason(vector),
             }
         elif vector == "ontology":
             rows[vector] = _ontology_reference(manifest.parent, entries[vector])

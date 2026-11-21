@@ -9,6 +9,7 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 ## [Unreleased]
 
 - Added an offline `ai-suite exit-report` command with a versioned project manifest, eleven evidence vectors, verification levels, installed component versions, Markdown and JSON output.
+- Added explicit `--verify-restores` handling for `restore-summary.v1` evidence. The scanner rebuilds and reruns all deterministic fan-out and chained fake profiles; unchecked records remain attested.
 
 ## [0.1.0b1] - 2026-08-13
 

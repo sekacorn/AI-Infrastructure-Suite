@@ -122,12 +122,19 @@ app = typer.Typer(
 def exit_report(
     manifest: Path,
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON instead of Markdown.")] = False,
+    verify_restores: Annotated[
+        bool,
+        typer.Option(
+            "--verify-restores",
+            help="Rebuild and recheck deterministic fake-profile restore records.",
+        ),
+    ] = False,
 ) -> None:
     """Report lock-in evidence from a local project manifest."""
     from ai_infrastructure_suite.exit_report import build_exit_report, render_markdown
 
     try:
-        report = build_exit_report(manifest)
+        report = build_exit_report(manifest, verify_restores=verify_restores)
     except (ValueError, OSError, RecursionError) as exc:
         # Filesystem and decoder errors may include private paths or input text.
         typer.echo("Invalid or inaccessible local exit manifest or evidence.", err=True)
