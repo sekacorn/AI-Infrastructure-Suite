@@ -7,6 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
+import pytest
 from typer.testing import CliRunner
 
 from ai_infrastructure_suite.cli import app
@@ -259,6 +260,23 @@ def make_restore_evidence(root: Path) -> Path:
     return root / "exit-manifest.json"
 
 
+def _assert_only_restore_vector_failed(
+    before: Record,
+    after: Record,
+    target: str,
+    reason: str,
+) -> None:
+    for vector in RESTORED_VECTORS:
+        row = after["vectors"][vector]
+        if vector == target:
+            assert row["state"] == "restore_failed"
+            assert row["score"] == 100
+            assert row["verification_level"] == "verified (fake profiles)"
+            assert row["reason"] == reason
+        else:
+            assert row == before["vectors"][vector]
+
+
 def test_restore_records_are_attested_until_scanner_rechecks(tmp_path: Path) -> None:
     manifest = make_restore_evidence(tmp_path)
     unchecked = build_exit_report(manifest)
@@ -300,3 +318,50 @@ def test_restore_contract_schemas_are_packaged_and_match_generated_evidence(
     assert set(summary_schema["required"]) == set(summary)
     assert set(record_schema["required"]) == set(record)
     assert manifest.exists()
+
+
+@pytest.mark.parametrize(
+    ("profile", "vector", "asset_path"),
+    (
+        ("mock-azure", "policies", "assets/policies.json"),
+        ("mock-aws", "prompts", "assets/prompt.txt"),
+        ("local-ollama", "memory", "assets/memory.json"),
+    ),
+)
+def test_post_record_profile_corruption_downgrades_only_its_vector(
+    tmp_path: Path,
+    profile: str,
+    vector: str,
+    asset_path: str,
+) -> None:
+    manifest = make_restore_evidence(tmp_path)
+    before = build_exit_report(manifest, verify_restores=True)
+    corrupted = tmp_path / "fanout" / profile / "restored" / asset_path
+    corrupted.write_bytes(corrupted.read_bytes() + b"post-record corruption\n")
+
+    after = build_exit_report(manifest, verify_restores=True)
+
+    _assert_only_restore_vector_failed(
+        before,
+        after,
+        vector,
+        f"fanout {profile} restored: {vector} digest mismatch.",
+    )
+
+
+def test_chained_mock_aws_export_corruption_is_attributed_to_hop_two(
+    tmp_path: Path,
+) -> None:
+    manifest = make_restore_evidence(tmp_path)
+    before = build_exit_report(manifest, verify_restores=True)
+    corrupted = tmp_path / "chain" / "02-mock-aws" / "exported" / "assets" / "cost-history.json"
+    corrupted.write_bytes(corrupted.read_bytes() + b"post-record corruption\n")
+
+    after = build_exit_report(manifest, verify_restores=True)
+
+    _assert_only_restore_vector_failed(
+        before,
+        after,
+        "cost_history",
+        "chain hop 2 mock-aws exported: cost_history digest mismatch.",
+    )
