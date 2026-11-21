@@ -18,7 +18,6 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
-from tests.test_restore_verification import make_restore_evidence
 from typer.testing import CliRunner
 
 from ai_infrastructure_suite._dependencies import (
@@ -29,6 +28,7 @@ from ai_infrastructure_suite._dependencies import (
 from ai_infrastructure_suite.cli import ExitCode, app
 from ai_infrastructure_suite.exit_report import build_exit_report
 from ai_infrastructure_suite.restore_verification import verify_restore_summary
+from test_restore_verification import make_restore_evidence
 
 ONTOLOGY_EXAMPLE = Path(__file__).parents[1] / "docs/examples/exit-report/manifest.json"
 

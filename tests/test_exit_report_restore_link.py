@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 
 import pytest
-from tests.test_restore_verification import make_restore_evidence
 
 from ai_infrastructure_suite.exit_report import build_exit_report, render_markdown
+from test_restore_verification import make_restore_evidence
 
 STORE_ID = "support-memory"
 RESTORED_WITHOUT_EMBEDDINGS = (
