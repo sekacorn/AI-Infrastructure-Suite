@@ -118,6 +118,7 @@ class RestoreVerification:
     """Per-vector results from a scanner-owned fake-profile rerun."""
 
     failures: dict[str, tuple[str, ...]]
+    profiles: tuple[ProfileVerification, ...]
 
     def passed(self, asset: str) -> bool:
         return not self.failures[asset]
@@ -129,6 +130,26 @@ class RestoreVerification:
                 "restores, behavior gates, and re-exports."
             )
         return self.failures[asset][0]
+
+
+@dataclass(frozen=True)
+class ProfileVerification:
+    """Scanner result for one fan-out or chained fake-profile run."""
+
+    run_kind: str
+    profile: str
+    hop_index: int
+    failures: tuple[str, ...]
+
+    @property
+    def passed(self) -> bool:
+        return not self.failures
+
+    @property
+    def reason(self) -> str:
+        if self.passed:
+            return "Scanner reproduced the recorded fake-profile behavior."
+        return self.failures[0]
 
 
 def _load_bundle(root: Path) -> Bundle:
@@ -582,6 +603,7 @@ def verify_restore_summary(summary_path: Path) -> RestoreVerification:
             )
         )
     failures: dict[str, list[str]] = {name: [] for name in ASSETS}
+    profiles: list[ProfileVerification] = []
     with tempfile.TemporaryDirectory(prefix="ai-suite-restore-") as directory:
         temporary = Path(directory)
         for record_index, document in enumerate(records):
@@ -596,20 +618,28 @@ def verify_restore_summary(summary_path: Path) -> RestoreVerification:
             if document["source_bundle_sha256"] != source.digest:
                 raise ValueError("Restore profile record source digest mismatch.")
             rebuilt = _write_rebuild(source, temporary / f"record-{record_index}")
+            profile_failures: list[str] = []
             try:
                 behavior = _behavior(rebuilt, profile)
             except (OSError, ValueError) as exc:
-                for asset in ASSETS:
-                    _add_failure(failures, asset, f"{label}: behavior rerun failed ({exc}).")
+                profile_failures.append(
+                    f"unattributed behavior drift: {label} scanner rerun failed ({exc})."
+                )
             else:
                 migration = document["migration"]
                 if not isinstance(migration, dict) or migration.get("behavior_gate") != behavior:
-                    for asset in ASSETS:
-                        _add_failure(
-                            failures,
-                            asset,
-                            f"{label}: recorded behavior differs from scanner rerun.",
-                        )
+                    profile_failures.append(
+                        "unattributed behavior drift: "
+                        f"{label} recorded behavior differs from scanner rerun."
+                    )
+            profiles.append(
+                ProfileVerification(
+                    run_kind=run_kind,
+                    profile=profile,
+                    hop_index=hop_index,
+                    failures=tuple(profile_failures),
+                )
+            )
             _check_copy(
                 root,
                 source,
@@ -625,5 +655,6 @@ def verify_restore_summary(summary_path: Path) -> RestoreVerification:
                 failures=failures,
             )
     return RestoreVerification(
-        failures={name: tuple(reasons) for name, reasons in failures.items()}
+        failures={name: tuple(reasons) for name, reasons in failures.items()},
+        profiles=tuple(profiles),
     )

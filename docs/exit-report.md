@@ -14,6 +14,11 @@ Supply a local JSON manifest with `schema_version` set to `exit-manifest.v1` and
 
 A `restore_tested` entry may reference a Linux of AI `restore-summary.v1`. Without `--verify-restores`, the scanner checks only the supplied record digest and labels the row `attested`. With the flag, it validates all six profile-record digests, rebuilds the three fan-out and three chained fake profiles in scanner-owned temporary directories, reruns the content and behavior checks, and compares the restored and re-exported assets. Successful rows are labeled `verified (fake profiles)`. The scanner never executes code named by a record and does not treat the machine sign-off as a person, certificate, or external identity.
 
+Behavioral disagreement with matching asset digests is reported separately in
+`restore_profiles` as `unattributed behavior drift`. It fails the affected
+profile run but does not guess which individual lock-in vector caused the
+drift. Asset vectors are downgraded only when their own content evidence fails.
+
 | Declared evidence | Score | Meaning |
 |---|---:|---|
 | restore_tested | 0 | A restore and functional check were recorded. It remains attested unless `--verify-restores` reruns the fake profiles. |

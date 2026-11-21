@@ -177,6 +177,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         raise ValueError("Invalid vector inventory.")
     rows = {}
     restore_cache: dict[tuple[str, str], Any] = {}
+    restore_profiles: dict[tuple[str, str, str, int], dict[str, Any]] = {}
     for vector in VECTORS:
         if vector not in entries:
             rows[vector] = {
@@ -207,6 +208,21 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
             if verification is None:
                 verification = verify_restore_summary(manifest.parent / reference["path"])
                 restore_cache[key] = verification
+            for profile_result in verification.profiles:
+                profile_key = (
+                    reference["path"],
+                    profile_result.run_kind,
+                    profile_result.profile,
+                    profile_result.hop_index,
+                )
+                restore_profiles[profile_key] = {
+                    "evidence_path": reference["path"],
+                    "run_kind": profile_result.run_kind,
+                    "profile": profile_result.profile,
+                    "hop_index": profile_result.hop_index,
+                    "state": "passed" if profile_result.passed else "failed",
+                    "reason": profile_result.reason,
+                }
             passed = verification.passed(vector)
             rows[vector] = {
                 **reference,
@@ -222,7 +238,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         else:
             rows[vector] = _reference(manifest.parent, entries[vector])
     installation = inspect_installation(check_imports=False)
-    return {
+    report: dict[str, Any] = {
         "schema_version": "exit-report.v1",
         "rubric_version": "1",
         "suite_version": __version__,
@@ -237,6 +253,9 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         },
         "legal_notice": "Contract terms are operator-attested. This report is not legal advice.",
     }
+    if restore_profiles:
+        report["restore_profiles"] = list(restore_profiles.values())
+    return report
 
 
 def render_markdown(report: dict[str, Any]) -> str:
@@ -257,6 +276,21 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append(
             f"| {name} | {score} | {row['verification_level']} | {row['reason']} | {ref} |"
         )
+    if "restore_profiles" in report:
+        lines.extend(
+            [
+                "",
+                "## Restore profile verification",
+                "",
+                "| Run | Profile | Hop | Status | Reason |",
+                "|---|---|---:|---|---|",
+            ]
+        )
+        for profile in report["restore_profiles"]:
+            lines.append(
+                f"| {profile['run_kind']} | {profile['profile']} | "
+                f"{profile['hop_index']} | {profile['state']} | {profile['reason']} |"
+            )
     lines.extend(["", "## Installed components", ""])
     for name, item in report["components"].items():
         version = item["version"] or "absent"

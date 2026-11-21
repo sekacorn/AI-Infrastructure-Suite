@@ -71,6 +71,12 @@
         "additionalProperties": false
       }
     },
+    "restore_profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/restore_profile"
+      }
+    },
     "legal_notice": {
       "const": "Contract terms are operator-attested. This report is not legal advice."
     }
@@ -86,6 +92,41 @@
   ],
   "additionalProperties": false,
   "$defs": {
+    "restore_profile": {
+      "type": "object",
+      "properties": {
+        "evidence_path": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "run_kind": {
+          "enum": ["fanout", "chain"]
+        },
+        "profile": {
+          "enum": ["mock-azure", "mock-aws", "local-ollama"]
+        },
+        "hop_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "state": {
+          "enum": ["passed", "failed"]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_path",
+        "run_kind",
+        "profile",
+        "hop_index",
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
     "vector": {
       "oneOf": [
         {

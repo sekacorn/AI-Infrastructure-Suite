@@ -11,7 +11,7 @@ import pytest
 from typer.testing import CliRunner
 
 from ai_infrastructure_suite.cli import app
-from ai_infrastructure_suite.exit_report import build_exit_report
+from ai_infrastructure_suite.exit_report import build_exit_report, render_markdown
 from ai_infrastructure_suite.restore_verification import ASSETS, _behavior, _load_bundle
 
 Record = dict[str, Any]
@@ -365,3 +365,49 @@ def test_chained_mock_aws_export_corruption_is_attributed_to_hop_two(
         "cost_history",
         "chain hop 2 mock-aws exported: cost_history digest mismatch.",
     )
+
+
+def test_matching_digests_report_unattributed_behavior_drift_without_vector_downgrade(
+    tmp_path: Path,
+) -> None:
+    manifest_path = make_restore_evidence(tmp_path)
+    summary_path = tmp_path / "restore-summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    azure_reference = summary["fanout"][0]
+    record_path = tmp_path / azure_reference["path"]
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["migration"]["behavior_gate"]["actual_result_sha256"] = "f" * 64
+    record_data = _write_json(record_path, record)
+    azure_reference["sha256"] = hashlib.sha256(record_data).hexdigest()
+
+    summary_data = _write_json(summary_path, summary)
+    summary_digest = hashlib.sha256(summary_data).hexdigest()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    for entry in manifest["vectors"].values():
+        entry["sha256"] = summary_digest
+    _write_json(manifest_path, manifest)
+
+    report = build_exit_report(manifest_path, verify_restores=True)
+
+    for vector in RESTORED_VECTORS:
+        row = report["vectors"][vector]
+        assert row["state"] == "restore_tested"
+        assert row["score"] == 0
+        assert row["verification_level"] == "verified (fake profiles)"
+    failed_profiles = [
+        profile for profile in report["restore_profiles"] if profile["state"] == "failed"
+    ]
+    assert failed_profiles == [
+        {
+            "evidence_path": "restore-summary.json",
+            "run_kind": "fanout",
+            "profile": "mock-azure",
+            "hop_index": 0,
+            "state": "failed",
+            "reason": (
+                "unattributed behavior drift: fanout mock-azure recorded behavior "
+                "differs from scanner rerun."
+            ),
+        }
+    ]
+    assert "unattributed behavior drift" in render_markdown(report)
