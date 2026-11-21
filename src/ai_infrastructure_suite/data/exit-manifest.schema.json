@@ -33,7 +33,8 @@
               "reconstruction",
               "non_exportable",
               "inapplicable",
-              "attested"
+              "attested",
+              "embedding_inventory"
             ]
           },
           "path": {

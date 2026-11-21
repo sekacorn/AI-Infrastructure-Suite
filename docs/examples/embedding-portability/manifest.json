@@ -1,0 +1,10 @@
+{
+  "schema_version": "exit-manifest.v1",
+  "vectors": {
+    "embeddings": {
+      "state": "embedding_inventory",
+      "path": "embedding-portability.json",
+      "sha256": "3be289efb718dc4c9329adf8d71c79932e60454e94551e20fdf63cb437875ca0"
+    }
+  }
+}

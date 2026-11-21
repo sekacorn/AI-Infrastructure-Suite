@@ -79,6 +79,14 @@
     },
     "legal_notice": {
       "const": "Contract terms are operator-attested. This report is not legal advice."
+    },
+    "embedding_stores": {
+      "description": "Per-store detail for the embedding inventory, one entry per scanned vector store.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/embedding_store"
+      }
     }
   },
   "required": [
@@ -100,10 +108,17 @@
           "maxLength": 240
         },
         "run_kind": {
-          "enum": ["fanout", "chain"]
+          "enum": [
+            "fanout",
+            "chain"
+          ]
         },
         "profile": {
-          "enum": ["mock-azure", "mock-aws", "local-ollama"]
+          "enum": [
+            "mock-azure",
+            "mock-aws",
+            "local-ollama"
+          ]
         },
         "hop_index": {
           "type": "integer",
@@ -111,7 +126,10 @@
           "maximum": 3
         },
         "state": {
-          "enum": ["passed", "failed"]
+          "enum": [
+            "passed",
+            "failed"
+          ]
         },
         "reason": {
           "type": "string"
@@ -165,7 +183,8 @@
                 "reconstruction",
                 "non_exportable",
                 "inapplicable",
-                "attested"
+                "attested",
+                "embedding_inventory"
               ]
             },
             "score": {
@@ -182,7 +201,13 @@
               "type": "string"
             },
             "verification_level": {
-              "enum": ["verified", "verified (fake profiles)", "attested"]
+              "enum": [
+                "verified",
+                "verified (fake profiles)",
+                "attested",
+                "verified (local evidence)",
+                "verified (local evidence + fake profiles)"
+              ]
             },
             "path": {
               "type": "string",
@@ -192,6 +217,28 @@
             "sha256": {
               "type": "string",
               "pattern": "^[0-9a-f]{64}$"
+            },
+            "re_embeddable": {
+              "description": "Aggregate embedding result. Present only for an embedding inventory.",
+              "enum": [
+                "yes",
+                "no",
+                "partial",
+                "not_applicable"
+              ]
+            },
+            "attested_claims": {
+              "description": "What the scanner did not re-run. Present only for an embedding inventory.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "enum": [
+                  "model availability",
+                  "model weights digest",
+                  "model license",
+                  "policy deletions"
+                ]
+              }
             }
           },
           "required": [
@@ -315,10 +362,210 @@
                   }
                 }
               }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "embedding_inventory"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              },
+              "then": {
+                "required": [
+                  "re_embeddable",
+                  "attested_claims"
+                ]
+              },
+              "else": {
+                "properties": {
+                  "re_embeddable": false,
+                  "attested_claims": false
+                }
+              }
             }
           ]
         }
       ]
+    },
+    "embedding_store": {
+      "type": "object",
+      "required": [
+        "store_id",
+        "model_id",
+        "model_revision",
+        "dimensions",
+        "availability",
+        "availability_verification",
+        "layout",
+        "shard_count",
+        "vector_count",
+        "retained",
+        "missing",
+        "deleted_by_policy",
+        "deleted_by_policy_verification",
+        "coverage_pct",
+        "restore_link",
+        "re_embeddable",
+        "score",
+        "reason",
+        "warnings",
+        "findings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "dimensions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "availability": {
+          "enum": [
+            "open_weight_self_hostable",
+            "vendor_only"
+          ]
+        },
+        "availability_verification": {
+          "const": "attested"
+        },
+        "weights_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "weights_verification": {
+          "const": "attested"
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "license_verification": {
+          "const": "attested"
+        },
+        "layout": {
+          "enum": [
+            "single_file",
+            "sharded_jsonl"
+          ]
+        },
+        "shard_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "vector_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted_by_policy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted_by_policy_verification": {
+          "const": "attested"
+        },
+        "coverage_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "restore_link": {
+          "enum": [
+            "verified",
+            "absent",
+            "unverified",
+            "store_id_matched_digest_mismatch"
+          ]
+        },
+        "re_embeddable": {
+          "enum": [
+            "yes",
+            "no",
+            "partial",
+            "not_applicable"
+          ]
+        },
+        "score": {
+          "enum": [
+            0,
+            25,
+            50,
+            75,
+            100,
+            null
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "record_count",
+              "record_ids",
+              "record_ids_truncated"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "const": "vector retained after source deletion"
+              },
+              "record_count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "record_ids": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "record_ids_truncated": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

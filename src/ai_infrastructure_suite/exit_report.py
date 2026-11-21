@@ -36,6 +36,17 @@ CONTRACT_TERMS = (
     "termination_assistance",
 )
 TERM_SCORES = {"confirmed": 0, "limited": 50, "absent": 100, "unknown": 100}
+RESTORE_VECTORS = frozenset(
+    {
+        "policies",
+        "prompts",
+        "embeddings",
+        "memory",
+        "audit_history",
+        "cost_history",
+        "ontology",
+    }
+)
 RUBRIC = {
     "restore_tested": (
         0,
@@ -46,6 +57,10 @@ RUBRIC = {
     "reconstruction": (75, "Operator documented a provider-specific reconstruction path."),
     "non_exportable": (100, "Operator documented a required asset that cannot be exported."),
     "inapplicable": (None, "Operator documented why this vector does not apply."),
+    "embedding_inventory": (
+        None,
+        "Operator supplied an embedding portability inventory.",
+    ),
 }
 
 
@@ -130,6 +145,109 @@ def _contract_terms_reference(root: Path, entry: object) -> dict[str, Any]:
     }
 
 
+def _restore_evidence(verifications: list[Any], *, supplied: bool) -> Any:
+    """Collect the store claims that passing restore verifications commit to."""
+    from ai_infrastructure_suite.embedding_portability import RestoreEvidence
+
+    stores: dict[str, str] = {}
+    verified = False
+    for verification in verifications:
+        # Only a cleanly reproduced run may support a store claim. A failed
+        # embeddings asset is disqualifying, and so is an unattributed
+        # behavior drift in any profile: a score of 0 claims a verified
+        # restore *and* a functional check, which drift puts in question.
+        if not verification.passed("embeddings") or not all(
+            profile.passed for profile in verification.profiles
+        ):
+            continue
+        verified = True
+        for store_id, digest in verification.embedding_stores.items():
+            if stores.setdefault(store_id, digest) != digest:
+                raise ValueError(
+                    "Restore summaries disagree about an embedding store evidence digest."
+                )
+    return RestoreEvidence(supplied=supplied, verified=verified, stores=stores)
+
+
+def _store_rows(result: Any) -> list[dict[str, Any]]:
+    """Render one report section per scanned vector store."""
+    rows: list[dict[str, Any]] = []
+    for store in result.stores:
+        model = store.model
+        row: dict[str, Any] = {
+            "store_id": store.store_id,
+            "model_id": model.id,
+            "model_revision": model.revision,
+            "dimensions": model.dimensions,
+            "availability": model.availability,
+            "availability_verification": "attested",
+            "layout": store.layout,
+            "shard_count": store.shard_count,
+            "vector_count": store.vector_count,
+            "retained": store.retained,
+            "missing": store.missing,
+            "deleted_by_policy": store.deleted_by_policy,
+            "deleted_by_policy_verification": "attested",
+            "coverage_pct": store.coverage,
+            "restore_link": store.restore_link,
+            "re_embeddable": store.re_embeddable,
+            "score": store.score,
+            "reason": store.reason,
+            "warnings": list(store.warnings),
+            "findings": [
+                {
+                    "code": finding.code,
+                    "record_count": finding.record_count,
+                    "record_ids": list(finding.record_ids),
+                    "record_ids_truncated": finding.truncated,
+                }
+                for finding in store.findings
+            ],
+        }
+        if model.weights_sha256 is not None:
+            row["weights_sha256"] = model.weights_sha256
+            row["weights_verification"] = "attested"
+        if model.license is not None:
+            row["license"] = model.license
+            row["license_verification"] = "attested"
+        rows.append(row)
+    return rows
+
+
+def _embedding_reference(root: Path, entry: object, restore: Any) -> dict[str, Any]:
+    """Scan an embedding portability inventory and build its vector row."""
+    from ai_infrastructure_suite.embedding_portability import scan_embedding_portability
+
+    reference = _reference(root, entry)
+    result = scan_embedding_portability(
+        root / reference["path"],
+        evidence_sha256=reference["sha256"],
+        restore=restore,
+    )
+    # The scanner re-ran every digest, dimension, and coverage check itself.
+    # The model's availability, weight digest, license, and any policy
+    # deletion remain operator declarations, so the row says both.
+    attested = ["model availability"]
+    if any(store.model.weights_sha256 is not None for store in result.stores):
+        attested.append("model weights digest")
+    if any(store.model.license is not None for store in result.stores):
+        attested.append("model license")
+    if any(store.deleted_by_policy for store in result.stores):
+        attested.append("policy deletions")
+    linked = any(store.restore_link == "verified" for store in result.stores)
+    level = "verified (local evidence + fake profiles)" if linked else "verified (local evidence)"
+    return {
+        **reference,
+        "state": "embedding_inventory",
+        "score": result.score,
+        "verification_level": level,
+        "re_embeddable": result.re_embeddable,
+        "attested_claims": attested,
+        "reason": f"{result.reason} Attested, not re-run: {', '.join(attested)}.",
+        "stores": _store_rows(result),
+    }
+
+
 def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[str, Any]:
     """Check local evidence digests and record installed component versions."""
     raw = read_bounded_file(manifest, 65536)
@@ -143,9 +261,31 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
     entries = document["vectors"]
     if not isinstance(entries, dict) or entries.keys() - set(VECTORS):
         raise ValueError("Invalid vector inventory.")
-    rows = {}
+    rows: dict[str, dict[str, Any]] = {}
     restore_cache: dict[tuple[str, str], Any] = {}
     restore_profiles: dict[tuple[str, str, str, int], dict[str, Any]] = {}
+    # Resolve restore summaries before any row is built. The embeddings vector
+    # may be scored against a restore declared on a later vector, so lazy
+    # verification inside the row loop would depend on vector ordering.
+    restore_supplied = any(
+        isinstance(entry, dict) and entry.get("state") == "restore_tested"
+        for entry in entries.values()
+    )
+    if verify_restores:
+        from ai_infrastructure_suite.restore_verification import verify_restore_summary
+
+        for vector, entry in entries.items():
+            if (
+                not isinstance(entry, dict)
+                or entry.get("state") != "restore_tested"
+                or vector not in RESTORE_VECTORS
+            ):
+                continue
+            reference = _reference(manifest.parent, entry)
+            key = (reference["path"], reference["sha256"])
+            if key not in restore_cache:
+                restore_cache[key] = verify_restore_summary(manifest.parent / reference["path"])
+    restore = _restore_evidence(list(restore_cache.values()), supplied=restore_supplied)
     for vector in VECTORS:
         if vector not in entries:
             rows[vector] = {
@@ -159,23 +299,9 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
             if not verify_restores:
                 rows[vector] = reference
                 continue
-            if vector not in {
-                "policies",
-                "prompts",
-                "embeddings",
-                "memory",
-                "audit_history",
-                "cost_history",
-                "ontology",
-            }:
+            if vector not in RESTORE_VECTORS:
                 raise ValueError("Restore verification does not cover this vector.")
-            from ai_infrastructure_suite.restore_verification import verify_restore_summary
-
-            key = (reference["path"], reference["sha256"])
-            verification = restore_cache.get(key)
-            if verification is None:
-                verification = verify_restore_summary(manifest.parent / reference["path"])
-                restore_cache[key] = verification
+            verification = restore_cache[(reference["path"], reference["sha256"])]
             for profile_result in verification.profiles:
                 profile_key = (
                     reference["path"],
@@ -199,12 +325,21 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
                 "verification_level": "verified (fake profiles)",
                 "reason": verification.reason(vector),
             }
+        elif isinstance(entries[vector], dict) and (
+            entries[vector].get("state") == "embedding_inventory"
+        ):
+            if vector != "embeddings":
+                raise ValueError("Only the embeddings vector accepts an embedding inventory.")
+            rows[vector] = _embedding_reference(manifest.parent, entries[vector], restore)
         elif vector == "ontology":
             rows[vector] = _ontology_reference(manifest.parent, entries[vector])
         elif vector == "contract_terms":
             rows[vector] = _contract_terms_reference(manifest.parent, entries[vector])
         else:
             rows[vector] = _reference(manifest.parent, entries[vector])
+    # Per-store detail lives in its own top-level section so the vector table
+    # keeps one row per vector.
+    embedding_stores = rows["embeddings"].pop("stores", None)
     installation = inspect_installation(check_imports=False)
     failed_profile_names = sorted(
         {
@@ -218,7 +353,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
             f"profile failure: unattributed drift in {profile}" for profile in failed_profile_names
         )
         for row in rows.values():
-            if row["verification_level"] == "verified (fake profiles)":
+            if row["verification_level"].startswith("verified"):
                 row["reason"] = f"{row['reason']} {annotation}."
     report: dict[str, Any] = {
         "schema_version": "exit-report.v1",
@@ -237,6 +372,8 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
     }
     if restore_profiles:
         report["restore_profiles"] = list(restore_profiles.values())
+    if embedding_stores is not None:
+        report["embedding_stores"] = embedding_stores
     return report
 
 
@@ -258,6 +395,46 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.append(
             f"| {name} | {score} | {row['verification_level']} | {row['reason']} | {ref} |"
         )
+    if "embedding_stores" in report:
+        lines.extend(
+            [
+                "",
+                "## Embedding stores",
+                "",
+                "Counts and coverage are scanner-verified. Model availability, any weights",
+                "digest, any license, and every policy deletion are operator-attested and",
+                "were not re-run.",
+                "",
+                "| Store | Model | Dim | Availability | Layout | Vectors | Retained | "
+                "Missing | Deleted (attested) | Coverage | Restore link | Re-embeddable | "
+                "Lock-in |",
+                "|---|---|---:|---|---|---:|---:|---:|---:|---:|---|---|---:|",
+            ]
+        )
+        for store in report["embedding_stores"]:
+            coverage = "N/A" if store["coverage_pct"] is None else f"{store['coverage_pct']:.2f}%"
+            score = "N/A" if store["score"] is None else store["score"]
+            shards = f"{store['layout']} ({store['shard_count']})"
+            lines.append(
+                f"| {store['store_id']} | {store['model_id']}@{store['model_revision']} | "
+                f"{store['dimensions']} | {store['availability']} (attested) | {shards} | "
+                f"{store['vector_count']} | {store['retained']} | {store['missing']} | "
+                f"{store['deleted_by_policy']} | {coverage} | {store['restore_link']} | "
+                f"{store['re_embeddable']} | {score} |"
+            )
+        for store in report["embedding_stores"]:
+            details = [
+                *(f"warning: {text}" for text in store["warnings"]),
+                *(
+                    f"finding: {finding['code']} ({finding['record_count']} record(s))"
+                    for finding in store["findings"]
+                ),
+            ]
+            if not details:
+                continue
+            lines.extend(["", f"### {store['store_id']}", ""])
+            lines.extend(f"- {text}" for text in details)
+            lines.append(f"- reason: {store['reason']}")
     if "restore_profiles" in report:
         lines.extend(
             [
