@@ -10,6 +10,8 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 - Added an offline `ai-suite exit-report` command with a versioned project manifest, eleven evidence vectors, verification levels, installed component versions, Markdown and JSON output.
 - Added explicit `--verify-restores` handling for `restore-summary.v1` evidence. The scanner rebuilds and reruns all deterministic fan-out and chained fake profiles; unchecked records remain attested.
+- Added offline embedding lock-in scanning for a new `embedding-portability.v1` evidence document, with a packaged JSON Schema. The scanner hashes retained source text, streams single-file or sharded JSONL vectors, computes source coverage, and scores migration lock-in. Model availability, weight digests, licenses, and policy deletions stay labeled attested; the scanner never embeds text, loads weights, or opens a socket.
+- Added an optional `embedding_stores` block to `restore-summary.v1`, binding a `store_id` to the SHA-256 of one embedding-portability evidence document. **A restore summary containing `embedding_stores` requires this release or later to read**, because the schema forbids unknown fields and `0.1.0b1` rejects it as invalid input. Summaries without the block are unaffected.
 
 ## [0.1.0b1] - 2026-08-13
 

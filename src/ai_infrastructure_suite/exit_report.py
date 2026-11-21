@@ -5,10 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import stat
 from pathlib import Path
 from typing import Any
 
+from ai_infrastructure_suite._evidence import (
+    portable_relative_path,
+    read_bounded_file,
+    unique_json_pairs,
+)
 from ai_infrastructure_suite._version import __version__
 from ai_infrastructure_suite.doctor import inspect_installation
 
@@ -45,52 +49,16 @@ RUBRIC = {
 }
 
 
-def _read(path: Path, limit: int) -> bytes:
-    if str(path).startswith(("//", "\\\\")) or ".." in path.parts:
-        raise ValueError("Expected a local path without traversal.")
-    path = path.absolute()
-    for part in (*reversed(path.parents), path):
-        info = part.lstat()
-        if stat.S_ISLNK(info.st_mode) or (
-            getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
-        ):
-            raise ValueError("Linked files and directories are unsupported.")
-    if not stat.S_ISREG(info.st_mode) or info.st_size > limit:
-        raise ValueError("Expected a bounded regular file.")
-    with path.open("rb") as stream:
-        data = stream.read(limit + 1)
-    if len(data) > limit:
-        raise ValueError("Input exceeds the file size limit.")
-    return data
-
-
-def _unique(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
-    result: dict[str, Any] = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("Duplicate JSON field.")
-        result[key] = value
-    return result
-
-
 def _reference(root: Path, entry: object) -> dict[str, Any]:
     if not isinstance(entry, dict) or entry.keys() != {"state", "path", "sha256"}:
         raise ValueError("Each entry requires state, path and sha256.")
-    state, name, digest = entry["state"], entry["path"], entry["sha256"]
+    state, digest = entry["state"], entry["sha256"]
     if not isinstance(state, str) or state not in RUBRIC:
         raise ValueError("Unrecognized evidence state.")
-    if not isinstance(name, str) or len(name) > 240:
-        raise ValueError("Invalid evidence path.")
-    for part in name.split("/"):
-        if (
-            not re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_.-]*", part)
-            or part.endswith(".")
-            or re.fullmatch(r"CON|PRN|AUX|NUL|(?:COM|LPT)[1-9]", part.split(".")[0], re.I)
-        ):
-            raise ValueError("Expected a portable project-relative evidence path.")
+    name = portable_relative_path(entry["path"])
     if not isinstance(digest, str) or not re.fullmatch("[0-9a-f]{64}", digest):
         raise ValueError("Invalid SHA-256 digest.")
-    data = _read(root / name, 4 * 1024 * 1024)
+    data = read_bounded_file(root / name, 4 * 1024 * 1024)
     if not data or hashlib.sha256(data).hexdigest() != digest:
         raise ValueError("Evidence is empty or differs from its declared SHA-256.")
     score, reason = RUBRIC[state]
@@ -138,8 +106,8 @@ def _contract_terms_reference(root: Path, entry: object) -> dict[str, Any]:
         raise ValueError("Contract terms must be labeled attested.")
     synthetic = {**entry, "state": "exported"}
     reference = _reference(root, synthetic)
-    raw = _read(root / reference["path"], 65536)
-    document = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique)
+    raw = read_bounded_file(root / reference["path"], 65536)
+    document = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_json_pairs)
     if (
         not isinstance(document, dict)
         or set(document) != {"schema_version", "checklist"}
@@ -164,8 +132,8 @@ def _contract_terms_reference(root: Path, entry: object) -> dict[str, Any]:
 
 def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[str, Any]:
     """Check local evidence digests and record installed component versions."""
-    raw = _read(manifest, 65536)
-    document = json.loads(raw.decode("utf-8"), object_pairs_hook=_unique)
+    raw = read_bounded_file(manifest, 65536)
+    document = json.loads(raw.decode("utf-8"), object_pairs_hook=unique_json_pairs)
     if (
         not isinstance(document, dict)
         or document.keys() != {"schema_version", "vectors"}

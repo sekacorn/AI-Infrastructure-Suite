@@ -12,7 +12,12 @@ from typer.testing import CliRunner
 
 from ai_infrastructure_suite.cli import ExitCode, app
 from ai_infrastructure_suite.exit_report import build_exit_report, render_markdown
-from ai_infrastructure_suite.restore_verification import ASSETS, _behavior, _load_bundle
+from ai_infrastructure_suite.restore_verification import (
+    ASSETS,
+    _behavior,
+    _load_bundle,
+    verify_restore_summary,
+)
 
 Record = dict[str, Any]
 RESTORED_VECTORS = (
@@ -437,3 +442,101 @@ def test_cli_returns_nonzero_after_emitting_profile_failure_report(tmp_path: Pat
         "profile failure: unattributed drift in mock-azure"
         in payload["vectors"]["embeddings"]["reason"]
     )
+
+
+def _rewrite_summary(root: Path, **changes: Any) -> Path:
+    """Apply changes to the summary and re-digest it in the exit manifest."""
+    summary_path = root / "restore-summary.json"
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    summary.update(changes)
+    summary_data = _write_json(summary_path, summary)
+    manifest_path = root / "exit-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entry = {
+        "state": "restore_tested",
+        "path": "restore-summary.json",
+        "sha256": hashlib.sha256(summary_data).hexdigest(),
+    }
+    manifest["vectors"] = dict.fromkeys(manifest["vectors"], entry)
+    _write_json(manifest_path, manifest)
+    return summary_path
+
+
+def test_a_summary_without_embedding_stores_reports_none(tmp_path: Path) -> None:
+    make_restore_evidence(tmp_path)
+
+    verification = verify_restore_summary(tmp_path / "restore-summary.json")
+
+    assert verification.embedding_stores == {}
+    assert all(verification.passed(asset) for asset in ASSETS)
+
+
+def test_an_optional_embedding_stores_block_is_accepted_and_exposed(tmp_path: Path) -> None:
+    make_restore_evidence(tmp_path)
+    summary_path = _rewrite_summary(
+        tmp_path,
+        embedding_stores=[{"store_id": "support-memory", "store_evidence_sha256": "a" * 64}],
+    )
+
+    verification = verify_restore_summary(summary_path)
+
+    assert verification.embedding_stores == {"support-memory": "a" * 64}
+    # The optional block must not disturb the per-asset verification result.
+    assert all(verification.passed(asset) for asset in ASSETS)
+
+
+def test_an_updated_summary_still_verifies_through_the_exit_report(tmp_path: Path) -> None:
+    manifest = make_restore_evidence(tmp_path)
+    _rewrite_summary(
+        tmp_path,
+        embedding_stores=[{"store_id": "support-memory", "store_evidence_sha256": "a" * 64}],
+    )
+
+    report = build_exit_report(manifest, verify_restores=True)
+
+    assert report["vectors"]["embeddings"]["verification_level"] == "verified (fake profiles)"
+    assert report["vectors"]["embeddings"]["score"] == 0
+
+
+@pytest.mark.parametrize(
+    "block",
+    (
+        [],
+        [{"store_id": "support-memory"}],
+        [{"store_id": "support-memory", "store_evidence_sha256": "A" * 64}],
+        [{"store_id": "support-memory", "store_evidence_sha256": "a" * 63}],
+        [{"store_id": "", "store_evidence_sha256": "a" * 64}],
+        [
+            {"store_id": "support-memory", "store_evidence_sha256": "a" * 64},
+            {"store_id": "support-memory", "store_evidence_sha256": "b" * 64},
+        ],
+        {"support-memory": "a" * 64},
+    ),
+)
+def test_a_malformed_embedding_stores_block_is_rejected(tmp_path: Path, block: object) -> None:
+    make_restore_evidence(tmp_path)
+    summary_path = _rewrite_summary(tmp_path, embedding_stores=block)
+
+    with pytest.raises(ValueError, match=r"embedding stores?"):
+        verify_restore_summary(summary_path)
+
+
+def test_other_unknown_summary_fields_are_still_rejected(tmp_path: Path) -> None:
+    make_restore_evidence(tmp_path)
+    summary_path = _rewrite_summary(tmp_path, embedding_store="support-memory")
+
+    with pytest.raises(ValueError, match="Restore summary fields are invalid"):
+        verify_restore_summary(summary_path)
+
+
+def test_the_packaged_summary_schema_describes_the_optional_block() -> None:
+    schema = json.loads(
+        files("ai_infrastructure_suite")
+        .joinpath("data/restore-summary-v1.schema.json")
+        .read_text(encoding="utf-8")
+    )
+    block = schema["properties"]["embedding_stores"]
+
+    assert "embedding_stores" not in schema["required"]
+    assert set(block["items"]["required"]) == {"store_id", "store_evidence_sha256"}
+    assert block["items"]["additionalProperties"] is False

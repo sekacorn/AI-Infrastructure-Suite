@@ -7,7 +7,7 @@ import json
 import math
 import stat
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
@@ -119,6 +119,13 @@ class RestoreVerification:
 
     failures: dict[str, tuple[str, ...]]
     profiles: tuple[ProfileVerification, ...]
+    embedding_stores: dict[str, str] = field(default_factory=dict)
+    """Vector stores this run commits to: ``store_id`` to evidence-document digest.
+
+    Operator-declared and empty unless the summary carries ``embedding_stores``.
+    The digest binds the claim to one embedding-portability document, so a
+    store named here with a different digest must not be treated as restored.
+    """
 
     def passed(self, asset: str) -> bool:
         return not self.failures[asset]
@@ -549,12 +556,33 @@ def _check_copy(
             _add_failure(failures, asset_name, f"{label}: {asset_name} digest mismatch.")
 
 
+def _embedding_stores(value: object) -> dict[str, str]:
+    """Parse the optional ``embedding_stores`` block of a restore summary."""
+    if value is None:
+        return {}
+    if not isinstance(value, list) or not value or len(value) > 64:
+        raise ValueError("Restore summary embedding stores are invalid.")
+    stores: dict[str, str] = {}
+    for entry in value:
+        if not isinstance(entry, dict) or entry.keys() != {"store_id", "store_evidence_sha256"}:
+            raise ValueError("Each embedding store requires store_id and store_evidence_sha256.")
+        store_id, digest = entry["store_id"], entry["store_evidence_sha256"]
+        if not isinstance(store_id, str) or not 0 < len(store_id) <= 128:
+            raise ValueError("Invalid embedding store_id.")
+        if not isinstance(digest, str) or len(digest) != 64 or digest.strip("0123456789abcdef"):
+            raise ValueError("Invalid embedding store evidence digest.")
+        if store_id in stores:
+            raise ValueError("Duplicate embedding store_id in restore summary.")
+        stores[store_id] = digest
+    return stores
+
+
 def verify_restore_summary(summary_path: Path) -> RestoreVerification:
     """Rebuild and recheck every fake-profile record referenced by a summary."""
     root = summary_path.absolute().parent
     summary_data = _read(root, summary_path.name, MAX_SUMMARY_BYTES)
     summary = _json(summary_data, "restore summary")
-    if set(summary) != {
+    required = {
         "schema_version",
         "verifier_contract",
         "provider_mode",
@@ -562,8 +590,12 @@ def verify_restore_summary(summary_path: Path) -> RestoreVerification:
         "fanout",
         "chain",
         "status",
-    }:
+    }
+    # ``embedding_stores`` is the one optional field. Accepting it here before any
+    # producer emits it keeps an updated summary readable by this scanner.
+    if not required <= set(summary) or set(summary) - (required | {"embedding_stores"}):
         raise ValueError("Restore summary fields are invalid.")
+    embedding_stores = _embedding_stores(summary.get("embedding_stores"))
     if (
         summary["schema_version"] != "restore-summary.v1"
         or summary["verifier_contract"] != "linux-ai-restore-demo.v1"
@@ -657,4 +689,5 @@ def verify_restore_summary(summary_path: Path) -> RestoreVerification:
     return RestoreVerification(
         failures={name: tuple(reasons) for name, reasons in failures.items()},
         profiles=tuple(profiles),
+        embedding_stores=embedding_stores,
     )
