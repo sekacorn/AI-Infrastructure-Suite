@@ -52,7 +52,20 @@ Model availability, any `weights_sha256`, any `license`, and every `deleted_by_p
 | Omitted entry | 100 | Unknown. The score is conservative and the report identifies missing evidence. |
 | inapplicable | N/A | The referenced record explains why the vector does not apply. |
 
-`verification_level` is `verified` when the scanner checked evidence content, `verified (fake profiles)` when it rebuilt the restore demo itself, `verified (local evidence)` when it re-ran the embedding inventory's own digest, dimension and coverage checks, `verified (local evidence + fake profiles)` when a verified restore also contributed, and `attested` when it checked only an operator record and digest. Missing evidence is `unverified`. None of these mean the evidence is authentic or that its provenance was established; they say which checks the scanner re-ran itself. The ontology vector is verified by loading and round-tripping OpenOntologyLite JSON-LD and comparing canonical ontology digests.
+## Verification vocabulary
+
+`verification_level` says **which checks the scanner re-ran itself**. No level means the evidence is authentic, that its provenance was established, or that an operator's claim about a vendor is true. A level is a statement about reproducibility and internal consistency, nothing more.
+
+| Level | The scanner re-ran | It did not establish | Appears on |
+|---|---|---|---|
+| `verified` | Loaded the evidence and re-ran a content check over its bytes: for the ontology vector, an OpenOntologyLite JSON-LD round trip whose canonical digest matched. | That the ontology describes the real system, or who produced it. | `ontology` |
+| `verified (fake profiles)` | Rebuilt all three fan-out and three chained deterministic fake profiles in scanner-owned temporary directories, re-ran the content and behavior gates, and compared restored and re-exported assets. | That any real vendor restore ever happened. The profiles are fakes by design. | Restore-tested vectors |
+| `verified (local evidence)` | Hashed every retained source text, checked it against both its declared digest and the digest recorded when the vector was produced, parsed every vector or shard against its own digest, and computed coverage and counts. | The model's availability, weight digest or license, and whether a `deleted_by_policy` record was really deleted under policy. See `attested_claims`. | `embeddings`, as an inventory |
+| `verified (local evidence + fake profiles)` | Both of the two rows above, and the restore it re-ran names this store and commits to this evidence document's exact digest. | The same attested model claims. A drifted profile withholds this level. | `embeddings`, as an inventory |
+| `attested` | Only that an operator-supplied record exists and its bytes match the declared SHA-256. | Everything the record asserts. A producer string inside a record is not trusted, and contract terms are never more than attested. | Any vector, and `contract_terms` always |
+| `unverified` | Nothing. No evidence was supplied. | Everything. The score is the conservative 100. | Any omitted vector |
+
+Never read an `attested` row as verified. The distinction is the point of the report: `attested` says an operator wrote something down and the bytes have not changed since, and `verified (...)` says the scanner reproduced a specific check and names which one. The ontology vector is verified by loading and round-tripping OpenOntologyLite JSON-LD and comparing canonical ontology digests. That needs `openontologylite>=0.2.0b3`, which publishes the JSON-LD transfer API. With an older install the command exits 2 and says which version to install; it does not report the operator's evidence as invalid or as behavior drift, because the check could not run at all.
 
 The contract-terms vector uses a `contract-terms-checklist.v1` record covering data export rights, fine-tune or adapter ownership, egress fees, and termination assistance. Values are `confirmed`, `limited`, `absent`, or `unknown`; the most restrictive answer supplies the score. This record is always operator-attested. The report is not legal advice.
 

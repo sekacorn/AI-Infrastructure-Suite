@@ -12,6 +12,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
+from ai_infrastructure_suite._dependencies import missing_ontology_api
+
 Record = dict[str, Any]
 
 ASSETS = (
@@ -280,12 +282,18 @@ def _retrieval(document: Record) -> tuple[str, int]:
 
 
 def _ontology_id(path: Path) -> str:
-    from open_ontology_lite import (
-        json_ld_text,
-        load_json_ld,
-        ontology_digest,
-        ontology_from_json_ld,
-    )
+    try:
+        from open_ontology_lite import (
+            json_ld_text,
+            load_json_ld,
+            ontology_digest,
+            ontology_from_json_ld,
+        )
+    except ImportError as exc:
+        # Not behavior drift: the check could not run at all. This must escape
+        # the per-profile ValueError handling rather than be recorded as a
+        # failed profile, so it uses a type that handling does not catch.
+        raise missing_ontology_api() from exc
 
     ontology = load_json_ld(path)
     restored = ontology_from_json_ld(json.loads(json_ld_text(ontology)))

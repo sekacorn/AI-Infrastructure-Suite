@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from ai_infrastructure_suite._dependencies import missing_ontology_api
 from ai_infrastructure_suite._evidence import (
     portable_relative_path,
     read_bounded_file,
@@ -91,13 +92,16 @@ def _ontology_reference(root: Path, entry: object) -> dict[str, Any]:
     reference = _reference(root, entry)
     if reference["state"] != "importer_validated":
         raise ValueError("Ontology evidence must declare importer_validated.")
-    from open_ontology_lite import (
-        json_ld_text,
-        load_json_ld,
-        ontology_digest,
-        ontology_from_json_ld,
-    )
-    from open_ontology_lite.errors import OpenOntologyLiteError
+    try:
+        from open_ontology_lite import (
+            json_ld_text,
+            load_json_ld,
+            ontology_digest,
+            ontology_from_json_ld,
+        )
+        from open_ontology_lite.errors import OpenOntologyLiteError
+    except ImportError as exc:
+        raise missing_ontology_api() from exc
 
     try:
         ontology = load_json_ld(root / reference["path"])

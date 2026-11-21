@@ -131,10 +131,17 @@ def exit_report(
     ] = False,
 ) -> None:
     """Report lock-in evidence from a local project manifest."""
+    from ai_infrastructure_suite._dependencies import MissingDependencyError
     from ai_infrastructure_suite.exit_report import build_exit_report, render_markdown
 
     try:
         report = build_exit_report(manifest, verify_restores=verify_restores)
+    except MissingDependencyError as exc:
+        # The operator's evidence may be fine; the environment is not. This
+        # message names only a distribution and a version, so it is safe to
+        # print as-is and actually tells the operator what to do.
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(ExitCode.ERROR) from exc
     except (ValueError, OSError, RecursionError) as exc:
         # Filesystem and decoder errors may include private paths or input text.
         typer.echo("Invalid or inaccessible local exit manifest or evidence.", err=True)
