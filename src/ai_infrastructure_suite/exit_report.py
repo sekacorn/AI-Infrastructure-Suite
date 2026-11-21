@@ -238,6 +238,20 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         else:
             rows[vector] = _reference(manifest.parent, entries[vector])
     installation = inspect_installation(check_imports=False)
+    failed_profile_names = sorted(
+        {
+            profile["profile"]
+            for profile in restore_profiles.values()
+            if profile["state"] == "failed"
+        }
+    )
+    if failed_profile_names:
+        annotation = "; ".join(
+            f"profile failure: unattributed drift in {profile}" for profile in failed_profile_names
+        )
+        for row in rows.values():
+            if row["verification_level"] == "verified (fake profiles)":
+                row["reason"] = f"{row['reason']} {annotation}."
     report: dict[str, Any] = {
         "schema_version": "exit-report.v1",
         "rubric_version": "1",

@@ -143,6 +143,8 @@ def exit_report(
         _emit_json(report)
     else:
         typer.echo(render_markdown(report))
+    if any(profile["state"] == "failed" for profile in report.get("restore_profiles", ())):
+        raise typer.Exit(ExitCode.PROBLEMS_FOUND)
 
 
 @app.command()

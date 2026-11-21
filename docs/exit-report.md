@@ -18,6 +18,9 @@ Behavioral disagreement with matching asset digests is reported separately in
 `restore_profiles` as `unattributed behavior drift`. It fails the affected
 profile run but does not guess which individual lock-in vector caused the
 drift. Asset vectors are downgraded only when their own content evidence fails.
+Every vector checked by the failed profile retains its score and includes a
+`profile failure: unattributed drift in <profile>` annotation. The command
+still emits the complete report and exits with status 1 when any profile fails.
 
 | Declared evidence | Score | Meaning |
 |---|---:|---|
