@@ -97,11 +97,11 @@
       "status": "ok"
     },
     "modelswapbench": {
-      "version": null,
-      "status": "optional"
+      "version": "0.1.0b1",
+      "status": "ok"
     },
     "openontologylite": {
-      "version": "0.2.0b2",
+      "version": "0.2.0b3",
       "status": "ok"
     },
     "privateaistack": {

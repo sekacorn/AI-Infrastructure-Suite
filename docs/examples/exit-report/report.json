@@ -2,7 +2,7 @@
   "schema_version": "exit-report.v1",
   "rubric_version": "1",
   "suite_version": "0.1.0b2",
-  "manifest_sha256": "e838cf47f03e0c0225b82da50c3a46683aa44d91a4477fc7a162a9ec12c4f714",
+  "manifest_sha256": "18d374bb936731ac7f4783d4c37ba3ba2670a3aaa1d6f9ac9d0dfdf92989b1ac",
   "vectors": {
     "policies": {
       "state": "unknown",
@@ -66,7 +66,7 @@
       "verification_level": "verified",
       "reason": "OpenOntologyLite loaded and round-tripped the JSON-LD without changing its digest.",
       "path": "ontology.jsonld",
-      "sha256": "2566d8677a8f0cbca68f2e94f534baaaac6c0f85ed622f90b6b8de038cf90e78"
+      "sha256": "5b54b0b5055d6cddaa0bd12e4e1c8e0cceba062ef4455b827a41e4544e92746b"
     },
     "contract_terms": {
       "state": "attested",
@@ -95,11 +95,11 @@
       "status": "ok"
     },
     "modelswapbench": {
-      "version": null,
-      "status": "optional"
+      "version": "0.1.0b1",
+      "status": "ok"
     },
     "openontologylite": {
-      "version": "0.2.0b2",
+      "version": "0.2.0b3",
       "status": "ok"
     },
     "privateaistack": {

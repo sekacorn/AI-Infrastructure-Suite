@@ -35,6 +35,6 @@ were not re-run.
 - agentpolicypack: 0.2.0b1 (ok)
 - aiauditlog: 0.2.0b1 (ok)
 - aimeter-oss: 0.2.0b1 (ok)
-- modelswapbench: absent (optional)
-- openontologylite: 0.2.0b2 (ok)
+- modelswapbench: 0.1.0b1 (ok)
+- openontologylite: 0.2.0b3 (ok)
 - privateaistack: absent (optional)

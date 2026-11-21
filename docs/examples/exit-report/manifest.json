@@ -9,7 +9,7 @@
     "ontology": {
       "state": "importer_validated",
       "path": "ontology.jsonld",
-      "sha256": "2566d8677a8f0cbca68f2e94f534baaaac6c0f85ed622f90b6b8de038cf90e78"
+      "sha256": "5b54b0b5055d6cddaa0bd12e4e1c8e0cceba062ef4455b827a41e4544e92746b"
     },
     "contract_terms": {
       "state": "attested",

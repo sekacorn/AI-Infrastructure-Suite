@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
+import json
 import tomllib
 from importlib import metadata
 from pathlib import Path
@@ -186,3 +188,33 @@ class TestManifestAgreesWithPyproject:
             "docker",
         ):
             assert unwanted not in base, f"{unwanted} must not be a default dependency"
+
+
+class TestShippedExamples:
+    """The example manifests must match the files as any platform checks them out.
+
+    A digest computed from a working copy with different line endings than the
+    repository stores makes the example fail everywhere else. Checking it here
+    catches that on the authoring machine instead of in CI on another OS.
+    """
+
+    @pytest.mark.parametrize("example", ("exit-report", "embedding-portability"))
+    def test_declared_digests_match_the_checked_out_bytes(self, example: str) -> None:
+        root = Path(__file__).resolve().parents[1] / "docs/examples" / example
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+
+        for name, entry in manifest["vectors"].items():
+            data = (root / entry["path"]).read_bytes()
+            assert hashlib.sha256(data).hexdigest() == entry["sha256"], (
+                f"{example}/{entry['path']} differs from the digest declared for {name}"
+            )
+
+    @pytest.mark.parametrize("example", ("exit-report", "embedding-portability"))
+    def test_every_referenced_file_is_stored_without_carriage_returns(self, example: str) -> None:
+        # .gitattributes normalizes these paths to LF, so a CR here means the
+        # working copy and the repository disagree and the digests will drift.
+        root = Path(__file__).resolve().parents[1] / "docs/examples" / example
+        manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+
+        for entry in manifest["vectors"].values():
+            assert b"\r" not in (root / entry["path"]).read_bytes(), entry["path"]

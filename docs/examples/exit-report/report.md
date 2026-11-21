@@ -1,7 +1,7 @@
 # Vendor exit evidence
 
 Suite 0.1.0b2 | Rubric 1
-Manifest SHA-256: `e838cf47f03e0c0225b82da50c3a46683aa44d91a4477fc7a162a9ec12c4f714`
+Manifest SHA-256: `18d374bb936731ac7f4783d4c37ba3ba2670a3aaa1d6f9ac9d0dfdf92989b1ac`
 
 Contract terms are operator-attested. This report is not legal advice.
 
@@ -16,7 +16,7 @@ Contract terms are operator-attested. This report is not legal advice.
 | cost_history | 100 | unverified | No evidence supplied. | - |
 | tool_connectors | 100 | unverified | No evidence supplied. | - |
 | identities | 100 | unverified | No evidence supplied. | - |
-| ontology | 25 | verified | OpenOntologyLite loaded and round-tripped the JSON-LD without changing its digest. | `ontology.jsonld` (`2566d8677a8f0cbca68f2e94f534baaaac6c0f85ed622f90b6b8de038cf90e78`) |
+| ontology | 25 | verified | OpenOntologyLite loaded and round-tripped the JSON-LD without changing its digest. | `ontology.jsonld` (`5b54b0b5055d6cddaa0bd12e4e1c8e0cceba062ef4455b827a41e4544e92746b`) |
 | contract_terms | 100 | attested | Operator checklist: data_export_rights=confirmed, fine_tune_adapter_ownership=unknown, egress_fees=limited, termination_assistance=confirmed. Not legal advice. | `contract-terms.json` (`0214654c8f2b9c90eef14e1e89bd953334239c3334ebeb4964e5bee3334c942f`) |
 
 ## Installed components
@@ -25,6 +25,6 @@ Contract terms are operator-attested. This report is not legal advice.
 - agentpolicypack: 0.2.0b1 (ok)
 - aiauditlog: 0.2.0b1 (ok)
 - aimeter-oss: 0.2.0b1 (ok)
-- modelswapbench: absent (optional)
-- openontologylite: 0.2.0b2 (ok)
+- modelswapbench: 0.1.0b1 (ok)
+- openontologylite: 0.2.0b3 (ok)
 - privateaistack: absent (optional)
