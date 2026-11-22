@@ -30,6 +30,11 @@ on:
         description: "Release tag to publish (for example v0.1.0a1)"
         required: true
         type: string
+      dry_run:
+        description: "Run every check but skip the PyPI upload"
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -45,6 +50,19 @@ jobs:
     outputs:
       version: ${{ steps.resolve.outputs.version }}
     steps:
+      - name: Report the release mode
+        env:
+          EVENT: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          echo "event_name     = ${EVENT}"
+          echo "inputs.dry_run = '${DRY_RUN}'"
+          if [ "${EVENT}" != "push" ] && [ "${DRY_RUN}" != "false" ]; then
+            echo "mode           = DRY RUN (the PyPI upload and everything after it will be skipped)"
+          else
+            echo "mode           = REAL RELEASE (the PyPI upload will run)"
+          fi
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
@@ -116,6 +134,9 @@ jobs:
     name: Publish to PyPI (Trusted Publishing)
     runs-on: ubuntu-latest
     needs: build
+    # Skipped on a dry run. `inputs.dry_run` is empty on a push event, so the
+    # event check comes first and settles it: a push is always a real release.
+    if: ${{ github.event_name == 'push' || inputs.dry_run == false }}
     environment:
       name: pypi
       url: https://pypi.org/project/ai-infrastructure-suite/${{ needs.build.outputs.version }}/
@@ -126,6 +147,17 @@ jobs:
         with:
           name: release-dist
           path: dist
+
+      - name: Refuse to upload during a dry run
+        env:
+          EVENT: ${{ github.event_name }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "${EVENT}" != "push" ] && [ "${DRY_RUN}" != "false" ]; then
+            echo "This job must not run during a dry run. Failing instead of uploading."
+            exit 1
+          fi
+          echo "Confirmed a real release: event=${EVENT} dry_run='${DRY_RUN}'"
 
       - name: Show what will be uploaded
         run: ls -1 dist
