@@ -189,7 +189,8 @@ def offline_contract_check() -> tuple[ContractCheck, ...]:
         recorded = event["event_digest"]
         recomputed = digest_value({k: v for k, v in event.items() if k != "event_digest"})
         if (
-            event["sequence"] != index
+            not isinstance(recorded, str)
+            or event["sequence"] != index
             or event["previous_digest"] != expected_previous
             or recorded != recomputed
         ):

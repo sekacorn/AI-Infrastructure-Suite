@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/ai-infrastructure-suite/schemas/embedding-portability.schema.json",
+  "title": "embedding-portability.v1",
+  "description": "Operator-supplied evidence that a vector store's embeddings can be rebuilt elsewhere. Model availability, weight digests, licenses, and policy deletions are attested declarations; retained source text and every digest are re-checked by the scanner.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "stores"],
+  "properties": {
+    "schema_version": {
+      "const": "embedding-portability.v1"
+    },
+    "stores": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/store" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+    },
+    "store": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["store_id", "embedding_model", "vectors"],
+      "properties": {
+        "store_id": { "$ref": "#/$defs/identifier" },
+        "embedding_model": { "$ref": "#/$defs/embedding_model" },
+        "vectors": {
+          "oneOf": [
+            { "$ref": "#/$defs/single_file_vectors" },
+            { "$ref": "#/$defs/sharded_jsonl_vectors" }
+          ]
+        }
+      }
+    },
+    "embedding_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "dimensions", "availability", "availability_verification"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "revision": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "dimensions": { "type": "integer", "minimum": 1, "maximum": 8192 },
+        "availability": {
+          "description": "Whether the operator can run this model themselves. Attested, never verified by the scanner.",
+          "enum": ["open_weight_self_hostable", "vendor_only"]
+        },
+        "availability_verification": {
+          "description": "Availability cannot be re-run offline, so this must say attested.",
+          "const": "attested"
+        },
+        "weights_sha256": {
+          "description": "Optional attested digest of the weights used to produce these vectors. When absent for a self-hostable model, re-embedding may not reproduce identical vectors.",
+          "$ref": "#/$defs/sha256"
+        },
+        "license": {
+          "description": "Optional attested model license. Reported, never scored.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "single_file_vectors": {
+      "description": "One file per vector. Suitable for small stores.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layout", "records"],
+      "properties": {
+        "layout": { "const": "single_file" },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "record_id",
+              "vector",
+              "source_text_sha256_in_vector_record",
+              "source_text"
+            ],
+            "properties": {
+              "record_id": { "$ref": "#/$defs/identifier" },
+              "vector": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["path", "sha256"],
+                "properties": {
+                  "path": { "$ref": "#/$defs/relative_path" },
+                  "sha256": { "$ref": "#/$defs/sha256" }
+                }
+              },
+              "source_text_sha256_in_vector_record": {
+                "description": "Digest of the source text as recorded when the vector was produced. A retained file must still hash to this value.",
+                "$ref": "#/$defs/sha256"
+              },
+              "source_text": { "$ref": "#/$defs/source_text" }
+            }
+          }
+        }
+      }
+    },
+    "sharded_jsonl_vectors": {
+      "description": "Vectors streamed from JSONL shards, each with its own digest. One failed shard invalidates the store.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layout", "shards", "source_text"],
+      "properties": {
+        "layout": { "const": "sharded_jsonl" },
+        "shards": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1024,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "sha256", "record_count"],
+            "properties": {
+              "path": { "$ref": "#/$defs/relative_path" },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "record_count": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "source_text": {
+          "description": "Exactly one entry per vector record across every shard.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["record_id", "source_text"],
+            "properties": {
+              "record_id": { "$ref": "#/$defs/identifier" },
+              "source_text": { "$ref": "#/$defs/source_text" }
+            }
+          }
+        }
+      }
+    },
+    "source_text": {
+      "oneOf": [
+        {
+          "description": "Scanner verified: the file is hashed and must match both digests.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "path", "sha256"],
+          "properties": {
+            "status": { "const": "retained" },
+            "path": { "$ref": "#/$defs/relative_path" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        {
+          "description": "No source text. Counted against coverage.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "const": "missing" }
+          }
+        },
+        {
+          "description": "Attested policy deletion. Excluded from coverage, reported as its own count, never penalized as lock-in.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "const": "deleted_by_policy" },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        }
+      ]
+    }
+  }
+}

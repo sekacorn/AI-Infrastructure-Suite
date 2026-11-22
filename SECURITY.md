@@ -6,7 +6,7 @@ AI Infrastructure Suite is alpha software. Security fixes are applied to the lat
 
 | Version | Supported |
 |---|---|
-| `0.1.0b1` | yes |
+| `0.1.0b2` | yes |
 
 ## Reporting a vulnerability
 

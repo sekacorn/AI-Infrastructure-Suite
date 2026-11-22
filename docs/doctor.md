@@ -91,7 +91,7 @@ ai-suite doctor --json
 ```json
 {
   "schema_version": "1.0",
-  "suite_version": "0.1.0b1",
+  "suite_version": "0.1.0b2",
   "manifest_schema_version": "1.0",
   "environment": {
     "python_version": "3.13.12",

@@ -1,0 +1,61 @@
+{
+  "schema_version": "embedding-portability.v1",
+  "stores": [
+    {
+      "store_id": "support-memory",
+      "embedding_model": {
+        "id": "example-embed-small",
+        "revision": "2026-02-01",
+        "dimensions": 8,
+        "availability": "open_weight_self_hostable",
+        "availability_verification": "attested",
+        "weights_sha256": "3b1f2c8d4e5a60718293a4b5c6d7e8f90112233445566778899aabbccddeeff0",
+        "license": "Apache-2.0"
+      },
+      "vectors": {
+        "layout": "single_file",
+        "records": [
+          {
+            "record_id": "procedure-password-reset",
+            "vector": {
+              "path": "vectors/procedure-password-reset.json",
+              "sha256": "264cc95978d3ba1765030d4b305fe9ee1a8180a486249005059bdbe388e53fe8"
+            },
+            "source_text_sha256_in_vector_record": "c86ceb18ae7d081f2ca62e1ab9198a4605c5f903ccf921a0d14f51cc273638da",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/procedure-password-reset.txt",
+              "sha256": "c86ceb18ae7d081f2ca62e1ab9198a4605c5f903ccf921a0d14f51cc273638da"
+            }
+          },
+          {
+            "record_id": "procedure-refund",
+            "vector": {
+              "path": "vectors/procedure-refund.json",
+              "sha256": "d6a746127ee645dd3478ac5eea4ca1602f17fa8dfec1fa0371d6d131e5954683"
+            },
+            "source_text_sha256_in_vector_record": "665bf3cf772307255f1adb7c64e9fbcd9f6bbcddeff5be38533528241a40bd3d",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/procedure-refund.txt",
+              "sha256": "665bf3cf772307255f1adb7c64e9fbcd9f6bbcddeff5be38533528241a40bd3d"
+            }
+          },
+          {
+            "record_id": "procedure-escalation",
+            "vector": {
+              "path": "vectors/procedure-escalation.json",
+              "sha256": "bf48e0f5ba19ef5d0e0549880851a8a882ce944e9b1d459c285460f14857cd74"
+            },
+            "source_text_sha256_in_vector_record": "98b3b8c5783c8a84ade7e20d56109e3ca0df034a4ae8b4bb87cda6f09ee76684",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/procedure-escalation.txt",
+              "sha256": "98b3b8c5783c8a84ade7e20d56109e3ca0df034a4ae8b4bb87cda6f09ee76684"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

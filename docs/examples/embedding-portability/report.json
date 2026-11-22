@@ -1,0 +1,141 @@
+{
+  "schema_version": "exit-report.v1",
+  "rubric_version": "1",
+  "suite_version": "0.1.0b2",
+  "manifest_sha256": "2c76950a105ef79e3c97af9a90f9ab5e26642a7f154f194a8827c2caaefeaad8",
+  "vectors": {
+    "policies": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "prompts": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "embeddings": {
+      "state": "embedding_inventory",
+      "score": 25,
+      "verification_level": "verified (local evidence)",
+      "reason": "Store 'support-memory' has complete source coverage and the attested model is self-hostable. No verified restore names this store. This is a validated export with a compatible importer. Attested, not re-run: model availability, model weights digest, model license.",
+      "path": "embedding-portability.json",
+      "sha256": "3be289efb718dc4c9329adf8d71c79932e60454e94551e20fdf63cb437875ca0",
+      "re_embeddable": "yes",
+      "attested_claims": [
+        "model availability",
+        "model weights digest",
+        "model license"
+      ]
+    },
+    "fine_tunes": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "memory": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "audit_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "cost_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "tool_connectors": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "identities": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "ontology": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "contract_terms": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    }
+  },
+  "components": {
+    "agentforge-oss": {
+      "version": "0.5.4",
+      "status": "ok"
+    },
+    "agentpolicypack": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aiauditlog": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aimeter-oss": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "modelswapbench": {
+      "version": "0.1.0b1",
+      "status": "ok"
+    },
+    "openontologylite": {
+      "version": "0.2.0b3",
+      "status": "ok"
+    },
+    "privateaistack": {
+      "version": null,
+      "status": "optional"
+    }
+  },
+  "legal_notice": "Contract terms are operator-attested. This report is not legal advice.",
+  "embedding_stores": [
+    {
+      "store_id": "support-memory",
+      "model_id": "example-embed-small",
+      "model_revision": "2026-02-01",
+      "dimensions": 8,
+      "availability": "open_weight_self_hostable",
+      "availability_verification": "attested",
+      "layout": "single_file",
+      "shard_count": 0,
+      "vector_count": 3,
+      "retained": 3,
+      "missing": 0,
+      "deleted_by_policy": 0,
+      "deleted_by_policy_verification": "attested",
+      "coverage_pct": 100.0,
+      "restore_link": "absent",
+      "re_embeddable": "yes",
+      "score": 25,
+      "reason": "Store 'support-memory' has complete source coverage and the attested model is self-hostable. No verified restore names this store. This is a validated export with a compatible importer.",
+      "warnings": [],
+      "findings": [],
+      "weights_sha256": "3b1f2c8d4e5a60718293a4b5c6d7e8f90112233445566778899aabbccddeeff0",
+      "weights_verification": "attested",
+      "license": "Apache-2.0",
+      "license_verification": "attested"
+    }
+  ]
+}

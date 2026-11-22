@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/AI-Infrastructure-Suite/schemas/restore-profile-record-v1.schema.json",
+  "title": "Linux of AI restore profile record",
+  "type": "object",
+  "properties": {
+    "schema_version": {"const": "restore-profile-record.v1"},
+    "run_kind": {"enum": ["fanout", "chain"]},
+    "hop_index": {"type": "integer", "minimum": 0, "maximum": 3},
+    "profile": {"enum": ["mock-azure", "mock-aws", "local-ollama"]},
+    "provider_mode": {"enum": ["fake", "live"]},
+    "source_bundle_sha256": {"$ref": "#/$defs/sha256"},
+    "input_bundle": {"$ref": "#/$defs/bundle"},
+    "restored_bundle": {"$ref": "#/$defs/bundle"},
+    "exported_bundle": {"$ref": "#/$defs/bundle"},
+    "migration": {"type": "object"},
+    "machine_signoff": {
+      "type": "object",
+      "properties": {
+        "producer": {"const": "linux-ai-restore-demo"},
+        "status": {"const": "passed"},
+        "checks": {"const": ["content", "behavior", "re-export"]},
+        "identity_claim": {"const": "none"}
+      },
+      "required": ["producer", "status", "checks", "identity_claim"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "run_kind",
+    "hop_index",
+    "profile",
+    "provider_mode",
+    "source_bundle_sha256",
+    "input_bundle",
+    "restored_bundle",
+    "exported_bundle",
+    "migration",
+    "machine_signoff"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "bundle": {
+      "type": "object",
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["path", "sha256"],
+      "additionalProperties": false
+    },
+    "path": {
+      "type": "string",
+      "maxLength": 240,
+      "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

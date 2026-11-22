@@ -6,7 +6,7 @@
 
 It contains **none of the seven projects' business logic**. It installs them, describes them, and diagnoses them. Each component remains independently installable and independently useful.
 
-> **Status:** `0.1.0b1` **published Beta release**. The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
+> **Status:** `0.1.0b2` **Beta release**. The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
 
 > **Independent project.** Linux of AI and AI Infrastructure Suite are independent open-source projects. They are **not affiliated with, endorsed by, or sponsored by the Linux Foundation**. "Linux of AI" is used as a descriptive name for an open, portable infrastructure ecosystem. This package is not an operating system, not a kernel, and not a replacement for either.
 
@@ -114,6 +114,8 @@ Use the metapackage when you want one coherent, version-checked environment. Use
 ---
 
 ## CLI
+
+Run `ai-suite exit-report docs/examples/exit-report/manifest.json` to inventory a project's vendor-exit evidence. Add `--json` for machine-readable output. For a Linux of AI `restore-summary.v1`, add `--verify-restores` to rebuild and recheck the deterministic fake profiles locally; results verified that way are labelled `verified (fake profiles)` because the profiles are offline fakes, not a real vendor restore. The `embeddings` vector can instead declare an `embedding-portability.v1` inventory, which is scored from retained source text, vector digests and coverage without calling an embedding API; the declared model's availability, weight digest and license stay operator-attested and are never re-run. The offline report checks referenced file digests and lists installed components. [Rubric and example outputs](docs/exit-report.md).
 
 ```bash
 ai-suite info             # what this is, extras, next steps
@@ -288,7 +290,7 @@ The manifest records `latest_published_version` alongside `minimum_version` so y
 
 Stated plainly, because an installer that overstates what it verified is worse than none:
 
-- **Beta, not 1.0.** All seven components have reached Beta, and this metapackage has a published `0.1.0b1` Beta release. APIs, schemas, and version ranges may still change before 1.0.
+- **Beta, not 1.0.** All seven components have reached Beta, and this metapackage has a published `0.1.0b` Beta line. APIs, schemas, and version ranges may still change before 1.0.
 - **Installed does not mean working.** The import layer proves a module loads and exposes its expected names, not that any workflow succeeds.
 - **The CLI layer reads metadata only.** A registered console script that crashes on startup still reports `ok` — nothing is executed.
 - **Live runtime integration is never tested here.** See the table above.

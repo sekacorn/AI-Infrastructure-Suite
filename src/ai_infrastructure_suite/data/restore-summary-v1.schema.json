@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/AI-Infrastructure-Suite/schemas/restore-summary-v1.schema.json",
+  "title": "Linux of AI restore summary",
+  "type": "object",
+  "properties": {
+    "schema_version": {"const": "restore-summary.v1"},
+    "verifier_contract": {"const": "linux-ai-restore-demo.v1"},
+    "provider_mode": {"enum": ["fake-only", "live-ollama"]},
+    "source_bundle": {"$ref": "#/$defs/bundle"},
+    "fanout": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/record"}
+    },
+    "chain": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/record"}
+    },
+    "status": {"const": "passed"},
+    "embedding_stores": {
+      "description": "Optional. Vector stores this run commits to, each binding a store_id to the SHA-256 of one embedding-portability.v1 evidence document. Operator-declared: a store named here with a different digest must not be treated as restored. Added in Phase 3a; requires ai-infrastructure-suite 0.1.0b2 or later to read.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "properties": {
+          "store_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "store_evidence_sha256": {"$ref": "#/$defs/sha256"}
+        },
+        "required": ["store_id", "store_evidence_sha256"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "verifier_contract",
+    "provider_mode",
+    "source_bundle",
+    "fanout",
+    "chain",
+    "status"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "bundle": {
+      "type": "object",
+      "properties": {
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["path", "sha256"],
+      "additionalProperties": false
+    },
+    "record": {
+      "type": "object",
+      "properties": {
+        "profile": {"enum": ["mock-azure", "mock-aws", "local-ollama"]},
+        "hop_index": {"type": "integer", "minimum": 0, "maximum": 3},
+        "path": {"$ref": "#/$defs/path"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["profile", "hop_index", "path", "sha256"],
+      "additionalProperties": false
+    },
+    "path": {
+      "type": "string",
+      "maxLength": 240,
+      "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

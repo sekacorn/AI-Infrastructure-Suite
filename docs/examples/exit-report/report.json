@@ -1,0 +1,111 @@
+{
+  "schema_version": "exit-report.v1",
+  "rubric_version": "1",
+  "suite_version": "0.1.0b2",
+  "manifest_sha256": "18d374bb936731ac7f4783d4c37ba3ba2670a3aaa1d6f9ac9d0dfdf92989b1ac",
+  "vectors": {
+    "policies": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "prompts": {
+      "state": "exported",
+      "score": 50,
+      "verification_level": "attested",
+      "reason": "Operator supplied evidence of a portable export.",
+      "path": "prompt.txt",
+      "sha256": "6b3e348bd817416829cea5f76243e36af89c468d839bd3ab171c684d9ebea739"
+    },
+    "embeddings": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "fine_tunes": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "memory": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "audit_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "cost_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "tool_connectors": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "identities": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "ontology": {
+      "state": "importer_validated",
+      "score": 25,
+      "verification_level": "verified",
+      "reason": "OpenOntologyLite loaded and round-tripped the JSON-LD without changing its digest.",
+      "path": "ontology.jsonld",
+      "sha256": "5b54b0b5055d6cddaa0bd12e4e1c8e0cceba062ef4455b827a41e4544e92746b"
+    },
+    "contract_terms": {
+      "state": "attested",
+      "score": 100,
+      "verification_level": "attested",
+      "reason": "Operator checklist: data_export_rights=confirmed, fine_tune_adapter_ownership=unknown, egress_fees=limited, termination_assistance=confirmed. Not legal advice.",
+      "path": "contract-terms.json",
+      "sha256": "0214654c8f2b9c90eef14e1e89bd953334239c3334ebeb4964e5bee3334c942f"
+    }
+  },
+  "components": {
+    "agentforge-oss": {
+      "version": "0.5.4",
+      "status": "ok"
+    },
+    "agentpolicypack": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aiauditlog": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aimeter-oss": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "modelswapbench": {
+      "version": "0.1.0b1",
+      "status": "ok"
+    },
+    "openontologylite": {
+      "version": "0.2.0b3",
+      "status": "ok"
+    },
+    "privateaistack": {
+      "version": null,
+      "status": "optional"
+    }
+  },
+  "legal_notice": "Contract terms are operator-attested. This report is not legal advice."
+}

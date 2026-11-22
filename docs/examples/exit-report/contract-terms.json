@@ -1,0 +1,9 @@
+{
+  "schema_version": "contract-terms-checklist.v1",
+  "checklist": {
+    "data_export_rights": "confirmed",
+    "fine_tune_adapter_ownership": "unknown",
+    "egress_fees": "limited",
+    "termination_assistance": "confirmed"
+  }
+}

@@ -8,6 +8,14 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.1.0b2] - 2026-11-21
+
+- Added an offline `ai-suite exit-report` command with a versioned project manifest, eleven evidence vectors, verification levels, installed component versions, Markdown and JSON output.
+- Added explicit `--verify-restores` handling for `restore-summary.v1` evidence. The scanner rebuilds and reruns all deterministic fan-out and chained fake profiles; unchecked records remain attested.
+- Added offline embedding lock-in scanning for a new `embedding-portability.v1` evidence document, with a packaged JSON Schema. The scanner hashes retained source text, streams single-file or sharded JSONL vectors, computes source coverage, and scores migration lock-in. Model availability, weight digests, licenses, and policy deletions stay labeled attested; the scanner never embeds text, loads weights, or opens a socket.
+- Fixed an unhandled `ImportError` when the installed `openontologylite` predates the JSON-LD transfer API. Ontology verification now exits 2 with a message naming `openontologylite>=0.2.0b3`, instead of printing a traceback (`exit-report`) or recording the missing API as unattributed behavior drift (`--verify-restores`).
+- Added an optional `embedding_stores` block to `restore-summary.v1`, binding a `store_id` to the SHA-256 of one embedding-portability evidence document. **A restore summary containing `embedding_stores` requires this release or later to read**, because the schema forbids unknown fields and `0.1.0b1` rejects it as invalid input. Reading an exit report that contains an embedding inventory also requires `0.1.0b2`, for the same reason. Summaries without the block are unaffected.
+
 ## [0.1.0b1] - 2026-08-13
 
 First Beta candidate for the suite itself. The seven components it installs are
@@ -120,6 +128,7 @@ Initial alpha release.
 - 165 tests, none of which require the seven repositories to be checked out,
   installed, or reachable.
 
-[Unreleased]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0b1...HEAD
+[Unreleased]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0b2...HEAD
+[0.1.0b2]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0b1...v0.1.0b2
 [0.1.0b1]: https://github.com/sekacorn/AI-Infrastructure-Suite/compare/v0.1.0a1...v0.1.0b1
 [0.1.0a1]: https://github.com/sekacorn/AI-Infrastructure-Suite/releases/tag/v0.1.0a1
