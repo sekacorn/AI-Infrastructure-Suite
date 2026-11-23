@@ -142,8 +142,8 @@
       "required": ["status", "query_set_size", "top_k"],
       "properties": {
         "status": {
-          "description": "sampled: thresholds met. below_threshold: the comparison ran and at least one threshold was not met. not_measured: no query set, or too small for sufficient evidence.",
-          "enum": ["sampled", "below_threshold", "not_measured"]
+          "description": "sampled: every declared threshold was met. below_threshold: the comparison ran and at least one threshold was not met. unjudged: the comparison ran and produced metrics, but no agreement floor was declared, so there is no verdict; the notes name what to declare to get one. not_measured: no query set, none usable, or too few queries for sufficient evidence. Only sampled can improve a lock-in score.",
+          "enum": ["sampled", "below_threshold", "unjudged", "not_measured"]
         },
         "query_set_size": { "type": "integer", "minimum": 0 },
         "top_k": { "type": "integer", "minimum": 1, "maximum": 1000 },
