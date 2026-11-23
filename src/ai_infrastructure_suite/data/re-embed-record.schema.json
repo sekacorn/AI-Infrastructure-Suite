@@ -148,6 +148,64 @@
         "query_set_size": { "type": "integer", "minimum": 0 },
         "top_k": { "type": "integer", "minimum": 1, "maximum": 1000 },
         "sufficient_evidence": { "type": "boolean" },
+        "mode": {
+          "description": "record_anchored: a retained record's own stored vector is the query in each store, so neither model is needed at query time. text: free-text queries embedded by each store's own model, which only a reproducible built-in scheme can do offline.",
+          "enum": ["record_anchored", "text"]
+        },
+        "metric_basis": {
+          "description": "What the metrics are about. neighborhood_agreement: whether the two stores place the same records near each other. retrieval_relevance: whether what was retrieved answers the query. record_anchored mode is always neighborhood_agreement, which is not a measurement of user search quality.",
+          "enum": ["neighborhood_agreement", "retrieval_relevance"]
+        },
+        "anchor_selection": {
+          "description": "How the query set was chosen. seeded_random: drawn by seeded hash over the record identifiers, so another party draws the same set. operator: supplied by the operator, who could have chosen the queries that flatter the result. An operator-chosen set reports normally but can never move a lock-in score.",
+          "enum": ["operator", "seeded_random"]
+        },
+        "anchor_seed": {
+          "description": "The seed the draw used, so the set can be redrawn. Required when anchor_selection is seeded_random and meaningless otherwise.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "similarity": {
+          "description": "The similarity function the ranking used.",
+          "enum": ["cosine"]
+        },
+        "thresholds": {
+          "description": "The thresholds this run was judged against, by check name. Operator-declared, so they are attested and never verified: a passing run met the bar its operator set, which may be any bar at all. A reader must be shown these beside the label.",
+          "type": "object",
+          "maxProperties": 16,
+          "propertyNames": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "additionalProperties": { "type": "number" }
+        },
+        "candidate_pool_size": {
+          "description": "How many records each query was ranked against. Smaller than the store when the pool was drawn, by the same seed, to keep the comparison bounded. A top_k_overlap is a share of this pool, not of the store.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "tie_break": {
+          "description": "How equal similarities were ordered, so a reader can tell a tie from a disagreement.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "boundary_ties": {
+          "description": "Queries whose top-k boundary fell inside a run of equal similarities, where membership was settled by the tie break rather than by the vectors.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "queries_skipped": {
+          "description": "Queries that were declared but could not be evaluated, for example an anchor missing from one of the two stores.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "correlation_undefined": {
+          "description": "True when rank correlation had no defined value for at least one query, for example because every candidate tied.",
+          "type": "boolean"
+        },
+        "top_k_capped": {
+          "description": "True when a store held fewer records than the requested top_k, so the effective k was smaller.",
+          "type": "boolean"
+        },
         "metrics": { "$ref": "#/$defs/metrics" },
         "checks": {
           "type": "array",

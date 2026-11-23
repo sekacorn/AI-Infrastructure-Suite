@@ -72,11 +72,19 @@ def parse(document: dict[str, Any]):
 
 
 def sampled_quality(**overrides: Any) -> dict[str, Any]:
+    """A passing quality block of the shape a seeded record-anchored run writes."""
     quality: dict[str, Any] = {
         "status": "sampled",
         "query_set_size": 10,
         "top_k": 5,
         "sufficient_evidence": True,
+        "mode": "record_anchored",
+        "metric_basis": "neighborhood_agreement",
+        "anchor_selection": "seeded_random",
+        "anchor_seed": "re-embed-quality",
+        "similarity": "cosine",
+        "candidate_pool_size": 64,
+        "thresholds": {"minimum_top_k_overlap": 0.7},
         "metrics": {"top_k_overlap": 0.8, "mrr": 0.7, "mrr_before": 0.72},
         "checks": [
             {"name": "minimum_top_k_overlap", "passed": True, "actual": 0.8, "threshold": 0.7}
@@ -186,6 +194,23 @@ def test_the_default_batch_size_is_bounded_for_a_small_machine() -> None:
 def test_the_attested_claims_name_what_the_record_cannot_establish() -> None:
     assert "query set representativeness" in ATTESTED_CLAIMS
     assert "model availability" in ATTESTED_CLAIMS
+    assert any("threshold" in claim for claim in ATTESTED_CLAIMS)
+
+
+def test_the_declared_thresholds_are_listed_among_the_attested_claims() -> None:
+    result = parse(record(quality=sampled_quality()))
+
+    claims = result.attested_claims()
+    assert set(ATTESTED_CLAIMS) <= set(claims)
+    # A reader who is shown "quality sampled" must also be shown the bar.
+    assert "operator-declared thresholds: minimum_top_k_overlap 0.7" in claims
+
+
+def test_a_record_without_thresholds_lists_only_the_fixed_claims() -> None:
+    bare = {"status": "not_measured", "query_set_size": 0, "top_k": 5}
+
+    assert parse(record(quality=bare)).attested_claims() == ATTESTED_CLAIMS
+    assert parse(record()).attested_claims() == ATTESTED_CLAIMS
 
 
 # --- Labels and scoring -----------------------------------------------------
@@ -225,7 +250,7 @@ def test_a_rebuild_nobody_reproduced_is_attested_however_good_the_numbers() -> N
     assert not result.improves_score(rebuild_reproduced=False)
 
 
-def test_the_score_moves_only_when_all_four_conditions_hold() -> None:
+def test_the_score_moves_only_when_all_five_conditions_hold() -> None:
     passing = record(quality=sampled_quality())
     assert parse(passing).improves_score(rebuild_reproduced=True)
 
@@ -236,6 +261,7 @@ def test_the_score_moves_only_when_all_four_conditions_hold() -> None:
     below = record(
         quality=sampled_quality(
             status="below_threshold",
+            thresholds={"m": 0.7},
             checks=[{"name": "m", "passed": False, "actual": 0.1, "threshold": 0.7}],
         )
     )
@@ -276,6 +302,46 @@ def test_the_score_moves_only_when_all_four_conditions_hold() -> None:
     )
     assert not parse(incomplete).improves_score(rebuild_reproduced=True)
 
+    # 5. the operator chose the query set
+    chosen = record(quality=sampled_quality(anchor_selection="operator", anchor_seed=None))
+    del chosen["quality"]["anchor_seed"]
+    assert not parse(chosen).improves_score(rebuild_reproduced=True)
+
+
+def test_an_operator_chosen_query_set_still_reports_its_full_label_and_metrics() -> None:
+    quality = sampled_quality(anchor_selection="operator")
+    del quality["anchor_seed"]
+
+    result = parse(record(quality=quality))
+
+    # It reports normally; only the score is withheld.
+    assert result.label(rebuild_reproduced=True) == "verified (re-embedded, quality sampled)"
+    assert result.quality is not None
+    assert result.quality.metrics["top_k_overlap"] == 0.8
+    assert not result.quality.reproducible_query_set
+    assert not result.improves_score(rebuild_reproduced=True)
+
+
+def test_a_record_predating_anchor_selection_moves_no_score() -> None:
+    # Silence about how the query set was chosen is read conservatively, not
+    # as a seeded draw.
+    quality = sampled_quality()
+    del quality["anchor_selection"]
+    del quality["anchor_seed"]
+
+    result = parse(record(quality=quality))
+
+    assert result.label(rebuild_reproduced=True) == "verified (re-embedded, quality sampled)"
+    assert not result.improves_score(rebuild_reproduced=True)
+
+
+def test_record_anchored_agreement_is_never_user_search_quality() -> None:
+    result = parse(record(quality=sampled_quality()))
+
+    assert result.quality is not None
+    assert result.quality.metric_basis == "neighborhood_agreement"
+    assert not result.quality.measures_user_search_quality
+
 
 def test_a_below_threshold_record_is_still_a_verified_label() -> None:
     # The rebuild was reproduced; only the quality claim failed. Reporting that
@@ -284,6 +350,7 @@ def test_a_below_threshold_record_is_still_a_verified_label() -> None:
         record(
             quality=sampled_quality(
                 status="below_threshold",
+                thresholds={"m": 0.7},
                 checks=[{"name": "m", "passed": False, "actual": 0.2, "threshold": 0.7}],
             )
         )
@@ -529,6 +596,97 @@ def test_a_non_finite_metric_is_refused() -> None:
         parse_re_embed_record(
             json.dumps(record(quality=sampled_quality())).encode().replace(b"0.8", b"NaN")
         )
+
+
+def test_a_seeded_query_set_without_its_seed_is_refused() -> None:
+    quality = sampled_quality()
+    del quality["anchor_seed"]
+
+    with pytest.raises(ReEmbedRecordError, match="must record its seed"):
+        parse(record(quality=quality))
+
+
+def test_a_seed_on_an_operator_chosen_query_set_is_refused() -> None:
+    # A seed that did not draw anything is decoration that looks like evidence.
+    with pytest.raises(ReEmbedRecordError, match="Only a seeded_random"):
+        parse(record(quality=sampled_quality(anchor_selection="operator")))
+
+
+def test_record_anchored_quality_claiming_relevance_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="neighborhood_agreement"):
+        parse(record(quality=sampled_quality(metric_basis="retrieval_relevance")))
+
+
+def test_thresholds_that_do_not_match_the_checks_are_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="do not match the checks"):
+        parse(record(quality=sampled_quality(thresholds={"minimum_rank_correlation": 0.5})))
+
+
+def test_an_unmeasured_result_carrying_thresholds_is_refused() -> None:
+    quality = {
+        "status": "not_measured",
+        "query_set_size": 0,
+        "top_k": 5,
+        "thresholds": {"minimum_top_k_overlap": 0.7},
+    }
+
+    with pytest.raises(ReEmbedRecordError, match="cannot carry thresholds"):
+        parse(record(quality=quality))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("mode", "vibes"),
+        ("metric_basis", "accuracy"),
+        ("anchor_selection", "handpicked"),
+        ("similarity", "euclidean"),
+    ),
+)
+def test_an_unknown_enum_value_is_refused(field: str, value: str) -> None:
+    quality = sampled_quality()
+    quality[field] = value
+    if field == "metric_basis":
+        quality["mode"] = "text"
+
+    with pytest.raises(ReEmbedRecordError, match=f"quality {field}"):
+        parse(record(quality=quality))
+
+
+def test_too_many_thresholds_are_refused() -> None:
+    quality = sampled_quality(thresholds={f"check_{index}": 0.5 for index in range(17)})
+
+    with pytest.raises(ReEmbedRecordError, match="Too many quality thresholds"):
+        parse(record(quality=quality))
+
+
+def test_a_non_numeric_threshold_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="threshold"):
+        parse(record(quality=sampled_quality(thresholds={"minimum_top_k_overlap": "high"})))
+
+
+def test_a_candidate_pool_of_zero_is_refused() -> None:
+    # Every query was ranked against something, or no query was ranked.
+    with pytest.raises(ReEmbedRecordError, match="candidate_pool_size"):
+        parse(record(quality=sampled_quality(candidate_pool_size=0)))
+
+
+def test_the_candidate_pool_size_is_read_back() -> None:
+    result = parse(record(quality=sampled_quality()))
+
+    assert result.quality is not None
+    assert result.quality.candidate_pool_size == 64
+
+
+def test_a_negative_boundary_tie_count_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="boundary_ties"):
+        parse(record(quality=sampled_quality(boundary_ties=-1)))
+
+
+def test_an_unknown_quality_field_is_still_refused() -> None:
+    # The additive fields widened the block; they did not open it.
+    with pytest.raises(ReEmbedRecordError, match="Unexpected fields in quality"):
+        parse(record(quality=sampled_quality(precision_at_1=0.9)))
 
 
 def test_an_unknown_quality_status_is_refused() -> None:

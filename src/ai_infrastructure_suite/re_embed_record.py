@@ -12,6 +12,11 @@ belongs to the tool that produced it.
 A ``quality`` block is evidence that a stated comparison ran and what it
 returned. It is never evidence that retrieval is good. The query set is the
 operator's, so its representativeness is attested and is reported as such.
+
+The optional fields added for the 3b-4 comparison are additive within
+``re-embed-record.v1``: a record written before them still parses, and one
+written with them is refused by any reader older than this release. Reading the
+new fields needs ai-infrastructure-suite 0.1.0b3 or later.
 """
 
 from __future__ import annotations
@@ -38,6 +43,11 @@ MAX_FAILURES: Final = 20
 
 AVAILABILITY: Final = frozenset({"open_weight_self_hostable", "vendor_only"})
 QUALITY_STATUS: Final = frozenset({"sampled", "below_threshold", "not_measured"})
+QUALITY_MODE: Final = frozenset({"record_anchored", "text"})
+METRIC_BASIS: Final = frozenset({"neighborhood_agreement", "retrieval_relevance"})
+ANCHOR_SELECTION: Final = frozenset({"operator", "seeded_random"})
+SIMILARITY: Final = frozenset({"cosine"})
+MAX_THRESHOLDS: Final = 16
 
 #: The default batch size, chosen to stay bounded on a 16 GB machine. Sixty-four
 #: records at the 1 MiB per-record source-text ceiling is 64 MiB of text, and 64
@@ -56,9 +66,13 @@ KNOWN_SCHEMES: Final = {
 }
 
 #: What a re-embed record can never establish, whatever its quality status.
+#: The thresholds belong here because the operator chose them: a run that
+#: "passed" passed the bar its own operator set, and a reader who is shown the
+#: verdict without the bar has been shown half the sentence.
 ATTESTED_CLAIMS: Final = (
     "model availability",
     "query set representativeness",
+    "quality thresholds, which the operator declared",
 )
 
 _IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]*")
@@ -158,10 +172,50 @@ class Quality:
     metrics: dict[str, float]
     checks: tuple[dict[str, Any], ...]
     notes: str | None
+    mode: str | None = None
+    metric_basis: str | None = None
+    anchor_selection: str | None = None
+    anchor_seed: str | None = None
+    similarity: str | None = None
+    candidate_pool_size: int | None = None
+    thresholds: dict[str, float] | None = None
+    tie_break: str | None = None
+    boundary_ties: int | None = None
+    queries_skipped: int | None = None
+    correlation_undefined: bool | None = None
+    top_k_capped: bool | None = None
 
     @property
     def passed(self) -> bool:
         return self.status == "sampled"
+
+    @property
+    def reproducible_query_set(self) -> bool:
+        """Whether another party can redraw this query set from the record alone.
+
+        Only a seeded draw is. An operator-supplied set may have been chosen
+        after seeing the numbers it would produce, and no offline check can
+        tell the difference, so it is reported and never scored.
+        """
+        return self.anchor_selection == "seeded_random" and bool(self.anchor_seed)
+
+    @property
+    def measures_user_search_quality(self) -> bool:
+        """Always false for ``neighborhood_agreement``.
+
+        Record-anchored agreement says the two stores put the same records near
+        each other. That is a statement about the stores, not about whether a
+        person searching either of them finds what they wanted, and nothing
+        built on this record may describe it as the latter.
+        """
+        return self.metric_basis == "retrieval_relevance"
+
+    def threshold_summary(self) -> str | None:
+        """The declared thresholds as one line, for printing beside the label."""
+        if not self.thresholds:
+            return None
+        parts = ", ".join(f"{name} {value:g}" for name, value in sorted(self.thresholds.items()))
+        return f"operator-declared thresholds: {parts}"
 
 
 @dataclass(frozen=True)
@@ -180,6 +234,20 @@ class ReEmbedRecord:
     def quality_status(self) -> str:
         """``sampled``, ``below_threshold`` or ``not_measured``."""
         return self.quality.status if self.quality is not None else "not_measured"
+
+    def attested_claims(self) -> tuple[str, ...]:
+        """Everything in this record that a reader must take on the operator's word.
+
+        The fixed claims are always listed. The declared thresholds are added
+        when the record carries them, because a report that prints
+        "quality sampled" without printing the bar that was cleared has told
+        the reader the verdict and withheld the standard.
+        """
+        claims = list(ATTESTED_CLAIMS)
+        summary = self.quality.threshold_summary() if self.quality is not None else None
+        if summary is not None:
+            claims.append(summary)
+        return tuple(claims)
 
     def label(self, *, rebuild_reproduced: bool) -> str:
         """The verification label this record earns.
@@ -207,12 +275,21 @@ class ReEmbedRecord:
         the caller, the quality check passed its thresholds, the target model is
         self-hostable, and no retained record failed to rebuild. A record can
         never earn a score of 0; that needs a verified restore.
+
+        A fifth condition is the query set itself: it must have been drawn by
+        seed, so another party can redraw it. An operator-chosen set is reported
+        with its full label and metrics and moves nothing, because an operator
+        who may pick the queries may pick the result. A record written before
+        this field existed carries no ``anchor_selection`` and therefore moves
+        no score either, which is the conservative reading of silence.
         """
         return (
             rebuild_reproduced
             and self.quality_status == "sampled"
             and self.target_model.self_hostable
             and self.coverage.complete
+            and self.quality is not None
+            and self.quality.reproducible_query_set
         )
 
 
@@ -427,10 +504,44 @@ def _metrics(raw: object) -> dict[str, float]:
     }
 
 
+def _enum(value: object, allowed: frozenset[str], label: str) -> str:
+    name = _text(value, label)
+    if name not in allowed:
+        raise ReEmbedRecordError(f"Invalid {label}.")
+    return name
+
+
+def _thresholds(raw: object) -> dict[str, float]:
+    document = _mapping(raw, "quality thresholds")
+    if len(document) > MAX_THRESHOLDS:
+        raise ReEmbedRecordError("Too many quality thresholds declared.")
+    return {
+        _text(name, "threshold name"): _ratio(value, f"threshold {name}", low=-1e9, high=1e9)
+        for name, value in document.items()
+    }
+
+
 def _quality(raw: object) -> Quality:
     document = _mapping(raw, "quality")
     required = {"status", "query_set_size", "top_k"}
-    optional = {"sufficient_evidence", "metrics", "checks", "notes"}
+    optional = {
+        "sufficient_evidence",
+        "metrics",
+        "checks",
+        "notes",
+        "mode",
+        "metric_basis",
+        "anchor_selection",
+        "anchor_seed",
+        "similarity",
+        "candidate_pool_size",
+        "thresholds",
+        "tie_break",
+        "boundary_ties",
+        "queries_skipped",
+        "correlation_undefined",
+        "top_k_capped",
+    }
     if not required <= set(document) or set(document) - (required | optional):
         raise ReEmbedRecordError("Unexpected fields in quality.")
     status = _text(document["status"], "quality status")
@@ -487,6 +598,57 @@ def _quality(raw: object) -> Quality:
         )
     if status == "not_measured" and (metrics or checks):
         raise ReEmbedRecordError("An unmeasured quality result cannot carry metrics or checks.")
+
+    mode = None if "mode" not in document else _enum(document["mode"], QUALITY_MODE, "quality mode")
+    basis = (
+        None
+        if "metric_basis" not in document
+        else _enum(document["metric_basis"], METRIC_BASIS, "quality metric_basis")
+    )
+    selection = (
+        None
+        if "anchor_selection" not in document
+        else _enum(document["anchor_selection"], ANCHOR_SELECTION, "quality anchor_selection")
+    )
+    seed = (
+        None
+        if "anchor_seed" not in document
+        else _text(document["anchor_seed"], "quality anchor_seed")
+    )
+    similarity = (
+        None
+        if "similarity" not in document
+        else _enum(document["similarity"], SIMILARITY, "quality similarity")
+    )
+    thresholds = None if "thresholds" not in document else _thresholds(document["thresholds"])
+    pool = None
+    if "candidate_pool_size" in document:
+        pool = _count(document["candidate_pool_size"], "candidate_pool_size")
+        if pool < 1:
+            raise ReEmbedRecordError("Invalid candidate_pool_size.")
+
+    # Record-anchored queries rank a store by one of its own vectors, so what
+    # they can show is agreement between two neighborhoods, never relevance.
+    # Letting a record claim otherwise is how an agreement number becomes a
+    # sentence about search quality somewhere downstream.
+    if mode == "record_anchored" and basis is not None and basis != "neighborhood_agreement":
+        raise ReEmbedRecordError(
+            "Record-anchored quality can only have a neighborhood_agreement basis."
+        )
+    # A seeded draw is only redrawable if the seed is in the record.
+    if selection == "seeded_random" and seed is None:
+        raise ReEmbedRecordError("A seeded_random query set must record its seed.")
+    if selection != "seeded_random" and seed is not None:
+        raise ReEmbedRecordError("Only a seeded_random query set may record a seed.")
+    # A verdict without its bar is half a sentence, and the three statuses are
+    # the verdict.
+    judged = status in ("sampled", "below_threshold") and checks and thresholds is not None
+    if judged and {check["name"] for check in checks} != set(thresholds or {}):
+        raise ReEmbedRecordError("Declared thresholds do not match the checks that were run.")
+    if status == "not_measured" and thresholds:
+        # Nothing was measured, so nothing was judged against a threshold.
+        raise ReEmbedRecordError("An unmeasured quality result cannot carry thresholds.")
+
     return Quality(
         status=status,
         query_set_size=query_set_size,
@@ -498,6 +660,38 @@ def _quality(raw: object) -> Quality:
             None
             if document.get("notes") is None
             else _text(document["notes"], "quality notes", MAX_REASON_CHARS)
+        ),
+        mode=mode,
+        metric_basis=basis,
+        anchor_selection=selection,
+        anchor_seed=seed,
+        similarity=similarity,
+        candidate_pool_size=pool,
+        thresholds=thresholds,
+        tie_break=(
+            None
+            if "tie_break" not in document
+            else _text(document["tie_break"], "quality tie_break")
+        ),
+        boundary_ties=(
+            None
+            if "boundary_ties" not in document
+            else _count(document["boundary_ties"], "boundary_ties")
+        ),
+        queries_skipped=(
+            None
+            if "queries_skipped" not in document
+            else _count(document["queries_skipped"], "queries_skipped")
+        ),
+        correlation_undefined=(
+            None
+            if "correlation_undefined" not in document
+            else _flag(document["correlation_undefined"], "correlation_undefined")
+        ),
+        top_k_capped=(
+            None
+            if "top_k_capped" not in document
+            else _flag(document["top_k_capped"], "top_k_capped")
         ),
     )
 

@@ -36,16 +36,27 @@
   },
   "quality": {
     "status": "sampled",
-    "query_set_size": 12,
-    "top_k": 5,
+    "query_set_size": 24,
+    "top_k": 10,
     "sufficient_evidence": true,
+    "mode": "record_anchored",
+    "metric_basis": "neighborhood_agreement",
+    "anchor_selection": "seeded_random",
+    "anchor_seed": "re-embed-quality",
+    "similarity": "cosine",
+    "candidate_pool_size": 64,
+    "tie_break": "ascending record_id among equal similarities",
+    "boundary_ties": 2,
+    "queries_skipped": 0,
+    "correlation_undefined": false,
+    "top_k_capped": false,
+    "thresholds": {
+      "minimum_top_k_overlap": 0.7,
+      "minimum_rank_correlation": 0.5
+    },
     "metrics": {
       "top_k_overlap": 0.8,
-      "rank_correlation": 0.74,
-      "hit_rate": 0.92,
-      "hit_rate_before": 0.92,
-      "mrr": 0.81,
-      "mrr_before": 0.85
+      "rank_correlation": 0.74
     },
     "checks": [
       {
@@ -55,12 +66,13 @@
         "threshold": 0.7
       },
       {
-        "name": "maximum_mrr_drop",
+        "name": "minimum_rank_correlation",
         "passed": true,
-        "actual": 0.04,
-        "threshold": 0.1,
-        "detail": "mrr fell from 0.85 to 0.81"
+        "actual": 0.74,
+        "threshold": 0.5,
+        "detail": "mean Spearman correlation over 24 anchors"
       }
-    ]
+    ],
+    "notes": "Neighborhood agreement between the two stores. Not a measurement of search quality."
   }
 }
