@@ -13,6 +13,102 @@ record.label(rebuild_reproduced=False)  # 'attested'
 record.attested_claims()
 ```
 
+## The egress block
+
+What left the machine. Local and offline is the default, and a run that
+transmitted anything must say so here.
+
+| Field | Says | Checked? |
+|---|---|---|
+| `remote_provider_used` | Whether a remote provider ran at all. | — |
+| `provider` | Which one. Required when `remote_provider_used`. | — |
+| `records_transmitted` | How many records' text was sent. | — |
+| `raw_source_text_transmitted` | Whether the text went unredacted. | — |
+| `hosting_mode` | `local` or `hosted`. `local` means no socket was opened. | — |
+| `hosted_execution_confirmed` | Whether the operator explicitly enabled hosted execution. | — |
+| `dataset_privacy_classification` | The operator's classification of the source text. | **No. Attested.** |
+| `redaction_applied` | Whether the operator states the text was redacted. | **No. Attested.** |
+| `telemetry_enabled` | Whether provider telemetry was left on. | — |
+| `warnings` | The preflight warnings the operator was shown. | — |
+
+The last two attested fields appear in `attested_claims()`. No scanner can read
+source text and tell whether an organisation considers it confidential, or
+whether a redaction removed what the operator thinks it removed, and reporting
+either as a fact would make an attestation look like a measurement.
+
+### Which code ran, and what it was handed
+
+An embedder is either package code the registry selected or operator-supplied
+code this scanner never ran. The second cannot be described as isolated or
+scanner-verified however it is labelled.
+
+| Field | Says | Checked? |
+|---|---|---|
+| `executor_kind` | `local_builtin` or `external_unverified`. | — |
+| `execution_verification` | `registry_owned` for package code, `attested` for injected code. | — |
+| `external_execution_confirmed` | Whether the operator permitted an injected executor. | — |
+| `executor_id` | The operator's label for it. | **No. A label, not an identity.** |
+| `endpoint_origin` | The declared scheme and authority, no path or credentials. | **No. An executor can ignore it.** |
+| `network_behavior_verification` | Always `attested`. | **No, and never can be.** |
+| `records_submitted_to_external_executor` | Distinct records handed over, from durable completed batches. | — |
+
+An external record's `attested_claims()` therefore also lists
+`injected executor network behaviour` and
+`whether any provider received a submitted record`.
+
+### Submission is not delivery
+
+The writing pipeline hands a payload to a callable and cannot observe what that
+callable does next, so **no record in this format can assert that a provider
+received anything**.
+
+| Field | Says |
+|---|---|
+| `transmission_basis` | `handed_to_executor`, or `no_transmission` for a registry-owned run. |
+| `transmission_accounting` | `distinct_records_in_completed_batches` — exactly what the number counts. |
+| `transmission_attempts_may_exceed_count` | Attempts can be higher: an executor may retry unobservably, and a crash before a checkpoint reaches disk discards a batch whose records were already handed over. |
+| `delivery_verification` | `unverified`. There is deliberately no other value, so "confirmed" is not expressible. |
+
+`Egress.delivery_established` is a property that returns `False`, present so a
+caller can check rather than infer. `Egress.submission_count` reads the explicit
+field and falls back to `records_transmitted` for a record written before it
+existed.
+
+`records_transmitted` keeps its established name and meaning for readers
+already using it. It is submission accounting, and the reader will refuse a
+record where it contradicts the rest of the block.
+
+#### What the reader refuses
+
+Rules, not conventions. A registry-owned run cannot declare an executor id, an
+endpoint, a network or accounting verification, a delivery verification, an
+exceeded-attempts flag, external consent, a submitted count, a
+`handed_to_executor` basis, `attested` execution, or any transmitted records.
+An external run must name its executor, must report `attested` execution and
+network behaviour, must use a `handed_to_executor` basis, and cannot report
+submissions while declaring that external execution was not confirmed. Nothing
+may report transmitting more records than it submitted to the executor, and
+only an `external_unverified` executor can have used a remote provider.
+
+`transmission_basis` is **not** required wherever a count appears. Requiring it
+would reject records this reader previously accepted, and additive has to mean
+a record written before a field existed is still valid. The writing tool always
+emits it, and PrivateAIStack's contract test enforces that end of the bargain.
+
+### A remote run without the opt-in is unrepresentable
+
+The reader refuses a record that reports transmitted content with
+`hosted_execution_confirmed: false`, and refuses one that reports transmitting
+while claiming `hosting_mode: local`. The rule lives here rather than only in
+the tool that writes records, so a tool that skipped its own gate still cannot
+produce a readable record of having done so.
+
+A run configured as hosted, blocked, and transmitting nothing is valid and
+expected: `remote_provider_used: false` with `hosting_mode: hosted` and the
+blocking warning. Without that shape a refused attempt would look identical to
+no attempt. `Egress.stayed_local` reads the facts — used and count — rather
+than `hosting_mode`, for exactly that reason.
+
 ## The quality block
 
 `quality` is absent when no comparison was attempted. That absence is not

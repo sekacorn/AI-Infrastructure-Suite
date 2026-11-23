@@ -28,6 +28,8 @@ from ai_infrastructure_suite.re_embed_record import (
 
 EXAMPLE = Path(__file__).parents[1] / "docs/examples/re-embed-record/re-embed-record.json"
 
+UNREDACTED_WARNING = "private unredacted dataset content would be transmitted to a hosted provider"
+
 SOURCE_DIGEST = "a" * 64
 TARGET_DIGEST = "b" * 64
 
@@ -511,6 +513,103 @@ def test_unlisted_failures_without_a_truncation_flag_are_refused() -> None:
         )
 
 
+def hosted_egress(**overrides: Any) -> dict[str, Any]:
+    """An egress block for a run the operator explicitly allowed."""
+    block: dict[str, Any] = {
+        "remote_provider_used": True,
+        "provider": "example-hosted-embeddings",
+        "records_transmitted": 2,
+        "raw_source_text_transmitted": True,
+        "hosting_mode": "hosted",
+        "hosted_execution_confirmed": True,
+        "dataset_privacy_classification": "internal",
+        "redaction_applied": False,
+        "telemetry_enabled": False,
+        "warnings": [UNREDACTED_WARNING],
+    }
+    block.update(overrides)
+    return block
+
+
+def test_a_local_run_reports_that_nothing_left_the_machine() -> None:
+    result = parse(record())
+
+    assert result.egress.stayed_local
+    assert not result.egress.remote_provider_used
+    assert result.egress.unverifiable_claims == ()
+
+
+def test_a_hosted_run_records_the_opt_in_and_the_warnings_the_operator_saw() -> None:
+    result = parse(record(egress=hosted_egress()))
+
+    assert not result.egress.stayed_local
+    assert result.egress.hosting_mode == "hosted"
+    assert result.egress.hosted_execution_confirmed
+    assert result.egress.dataset_privacy_classification == "internal"
+    assert result.egress.warnings == (UNREDACTED_WARNING,)
+
+
+def test_the_classification_and_redaction_are_attested_not_checked() -> None:
+    result = parse(record(egress=hosted_egress()))
+
+    claims = result.attested_claims()
+    assert "dataset privacy classification" in claims
+    assert "whether transmitted text was redacted" in claims
+
+
+def test_a_blocked_hosted_run_that_transmitted_nothing_is_valid() -> None:
+    # Configured as hosted, refused, nothing sent. The record has to be able to
+    # say that, or a blocked attempt looks identical to no attempt.
+    blocked = {
+        "remote_provider_used": False,
+        "records_transmitted": 0,
+        "raw_source_text_transmitted": False,
+        "hosting_mode": "hosted",
+        "hosted_execution_confirmed": False,
+        "warnings": ["hosted execution is blocked until explicitly enabled"],
+    }
+
+    result = parse(record(egress=blocked))
+
+    assert result.egress.stayed_local
+    assert result.egress.hosting_mode == "hosted"
+    assert not result.egress.hosted_execution_confirmed
+
+
+def test_a_remote_run_without_the_opt_in_is_unrepresentable() -> None:
+    # The whole point of 3b-5: a run cannot report that it transmitted content
+    # the operator never enabled.
+    with pytest.raises(ReEmbedRecordError, match="hosted execution was not confirmed"):
+        parse(record(egress=hosted_egress(hosted_execution_confirmed=False)))
+
+
+def test_a_transmitting_run_claiming_local_hosting_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="cannot report local hosting"):
+        parse(record(egress=hosted_egress(hosting_mode="local")))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("hosting_mode", "serverless"),
+        ("dataset_privacy_classification", "top-secret"),
+    ),
+)
+def test_an_unknown_egress_enum_value_is_refused(field: str, value: str) -> None:
+    with pytest.raises(ReEmbedRecordError, match=f"egress {field}"):
+        parse(record(egress=hosted_egress(**{field: value})))
+
+
+def test_too_many_egress_warnings_are_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="Too many egress warnings"):
+        parse(record(egress=hosted_egress(warnings=[f"warning {index}" for index in range(17)])))
+
+
+def test_an_unknown_egress_field_is_still_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="Unexpected fields in egress"):
+        parse(record(egress=hosted_egress(region="eu-west-1")))
+
+
 def test_a_local_run_claiming_transmitted_content_is_refused() -> None:
     with pytest.raises(ReEmbedRecordError, match="local run cannot report transmitted content"):
         parse(
@@ -810,3 +909,246 @@ def test_the_packaged_schema_matches_the_reader() -> None:
     assert schema["$defs"]["model_identity"]["properties"]["availability_verification"] == {
         "const": "attested"
     }
+
+
+# --- Executor trust boundary ----------------------------------------------
+
+
+def external_egress(**overrides: Any) -> dict[str, Any]:
+    """An egress block of the shape an injected-executor run writes."""
+    block: dict[str, Any] = {
+        "executor_kind": "external_unverified",
+        "execution_verification": "attested",
+        "remote_provider_used": True,
+        "records_transmitted": 2,
+        "transmission_basis": "handed_to_executor",
+        "records_submitted_to_external_executor": 2,
+        "raw_source_text_transmitted": True,
+        "hosting_mode": "hosted",
+        "external_execution_confirmed": True,
+        "hosted_execution_confirmed": True,
+        "dataset_privacy_classification": "public",
+        "redaction_applied": False,
+        "telemetry_enabled": False,
+        "executor_id": "example-hosted",
+        "endpoint_origin": "https://embeddings.example",
+        "network_behavior_verification": "attested",
+        "transmission_accounting": "distinct_records_in_completed_batches",
+        "transmission_attempts_may_exceed_count": True,
+        "delivery_verification": "unverified",
+        "provider": "example-hosted",
+    }
+    block.update(overrides)
+    return block
+
+
+def registry_egress(**overrides: Any) -> dict[str, Any]:
+    """An egress block of the shape a registry-owned run writes."""
+    block: dict[str, Any] = {
+        "executor_kind": "local_builtin",
+        "execution_verification": "registry_owned",
+        "remote_provider_used": False,
+        "records_transmitted": 0,
+        "transmission_basis": "no_transmission",
+        "records_submitted_to_external_executor": 0,
+        "raw_source_text_transmitted": False,
+        "hosting_mode": "local",
+        "external_execution_confirmed": False,
+        "hosted_execution_confirmed": False,
+        "dataset_privacy_classification": "unknown",
+        "redaction_applied": False,
+        "telemetry_enabled": False,
+    }
+    block.update(overrides)
+    return block
+
+
+def test_a_registry_owned_run_reads_as_owned_and_silent() -> None:
+    result = parse(record(egress=registry_egress()))
+
+    egress = result.egress
+    assert egress.executor_kind == "local_builtin"
+    assert egress.execution_verification == "registry_owned"
+    assert not egress.used_external_executor
+    assert egress.transmission_basis == "no_transmission"
+    assert egress.submission_count == 0
+    assert egress.stayed_local
+
+
+def test_an_external_run_reads_as_submission_never_delivery() -> None:
+    result = parse(record(egress=external_egress()))
+
+    egress = result.egress
+    assert egress.used_external_executor
+    assert egress.execution_verification == "attested"
+    assert egress.network_behavior_verification == "attested"
+    assert egress.transmission_basis == "handed_to_executor"
+    assert egress.transmission_accounting == "distinct_records_in_completed_batches"
+    assert egress.transmission_attempts_may_exceed_count
+    assert egress.delivery_verification == "unverified"
+    # The one question a reader most wants to answer wrongly.
+    assert not egress.delivery_established
+    assert egress.submission_count == 2
+
+
+def test_an_external_run_adds_its_own_attested_claims() -> None:
+    claims = parse(record(egress=external_egress())).attested_claims()
+
+    assert "injected executor network behaviour" in claims
+    assert "whether any provider received a submitted record" in claims
+    # A registry-owned run makes neither claim, because it handed nothing over.
+    assert (
+        "injected executor network behaviour"
+        not in parse(record(egress=registry_egress())).attested_claims()
+    )
+
+
+def test_the_submission_count_falls_back_for_an_older_record() -> None:
+    # A record written before the explicit field still answers the question.
+    block = external_egress()
+    del block["records_submitted_to_external_executor"]
+
+    assert parse(record(egress=block)).egress.submission_count == 2
+
+
+# --- Refused: contradictory executor claims -------------------------------
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    (
+        ("executor_id", "x", "cannot declare executor_id"),
+        ("endpoint_origin", "https://x.example", "cannot declare endpoint_origin"),
+        (
+            "network_behavior_verification",
+            "attested",
+            "cannot declare network_behavior_verification",
+        ),
+        (
+            "transmission_accounting",
+            "distinct_records_in_completed_batches",
+            "cannot declare transmission_accounting",
+        ),
+        ("delivery_verification", "unverified", "cannot declare delivery_verification"),
+    ),
+)
+def test_a_registry_owned_run_cannot_declare_external_fields(
+    field: str, value: str, message: str
+) -> None:
+    with pytest.raises(ReEmbedRecordError, match=message):
+        parse(record(egress=registry_egress(**{field: value})))
+
+
+def test_a_registry_owned_run_cannot_claim_attempts_exceeded_a_count() -> None:
+    with pytest.raises(ReEmbedRecordError, match="hands nothing over"):
+        parse(record(egress=registry_egress(transmission_attempts_may_exceed_count=True)))
+
+
+def test_a_registry_owned_run_cannot_report_submissions() -> None:
+    with pytest.raises(ReEmbedRecordError, match="records submitted to an external executor"):
+        parse(record(egress=registry_egress(records_submitted_to_external_executor=2)))
+
+
+def test_a_registry_owned_run_cannot_report_external_consent() -> None:
+    with pytest.raises(ReEmbedRecordError, match="external execution consent"):
+        parse(record(egress=registry_egress(external_execution_confirmed=True)))
+
+
+def test_a_registry_owned_run_cannot_claim_a_handover_basis() -> None:
+    with pytest.raises(ReEmbedRecordError, match="must report a no_transmission basis"):
+        parse(record(egress=registry_egress(transmission_basis="handed_to_executor")))
+
+
+def test_a_registry_owned_run_cannot_claim_attested_execution() -> None:
+    # Package code the scanner selects is registry_owned; relabelling it
+    # attested would blur the only distinction the field exists to make.
+    with pytest.raises(ReEmbedRecordError, match="must report registry_owned execution"):
+        parse(record(egress=registry_egress(execution_verification="attested")))
+
+
+def test_an_external_run_cannot_claim_registry_owned_execution() -> None:
+    # Code this scanner never ran cannot be described as owned by it.
+    with pytest.raises(ReEmbedRecordError, match="must report attested execution"):
+        parse(record(egress=external_egress(execution_verification="registry_owned")))
+
+
+def test_an_external_run_must_name_its_executor() -> None:
+    block = external_egress()
+    del block["executor_id"]
+
+    with pytest.raises(ReEmbedRecordError, match="must name its executor"):
+        parse(record(egress=block))
+
+
+def test_an_external_run_cannot_claim_a_no_transmission_basis() -> None:
+    with pytest.raises(ReEmbedRecordError, match="must report a handed_to_executor basis"):
+        parse(record(egress=external_egress(transmission_basis="no_transmission")))
+
+
+def test_submitted_records_without_consent_are_refused() -> None:
+    # Default-deny, enforced by the reader and not only by the writer.
+    with pytest.raises(ReEmbedRecordError, match="without external execution consent"):
+        parse(record(egress=external_egress(external_execution_confirmed=False)))
+
+
+def test_transmitting_more_than_was_submitted_is_refused() -> None:
+    # A payload reaches a provider only by way of the executor it was handed to.
+    with pytest.raises(ReEmbedRecordError, match="than were submitted to the executor"):
+        parse(record(egress=external_egress(records_submitted_to_external_executor=1)))
+
+
+def test_the_external_fixture_matches_what_the_record_rebuilt() -> None:
+    # Guards the fixture itself: a transmitted count above retained_rebuilt is
+    # refused by a pre-existing rule, which would mask the rules under test.
+    result = parse(record(egress=external_egress()))
+
+    assert result.egress.records_transmitted <= result.coverage.retained_rebuilt
+
+
+def test_a_registry_owned_run_cannot_have_used_a_remote_provider() -> None:
+    with pytest.raises(ReEmbedRecordError, match="Only an external_unverified executor"):
+        parse(
+            record(
+                egress=registry_egress(
+                    remote_provider_used=True,
+                    provider="example-hosted",
+                    records_transmitted=0,
+                    hosting_mode="hosted",
+                    hosted_execution_confirmed=True,
+                )
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("executor_kind", "trusted"),
+        ("execution_verification", "verified"),
+        ("transmission_basis", "delivered"),
+        ("transmission_accounting", "all_attempts"),
+        ("delivery_verification", "confirmed"),
+        ("network_behavior_verification", "isolated"),
+    ),
+)
+def test_an_unknown_executor_enum_value_is_refused(field: str, value: str) -> None:
+    # Notably "delivered", "confirmed" and "isolated": the three words a record
+    # must never be able to say.
+    with pytest.raises(ReEmbedRecordError, match=f"egress {field}"):
+        parse(record(egress=external_egress(**{field: value})))
+
+
+def test_a_basis_without_a_count_is_still_accepted() -> None:
+    # Additive means a record written before transmission_basis existed stays
+    # valid, so the field cannot be required wherever a count appears.
+    block = external_egress()
+    del block["transmission_basis"]
+    del block["transmission_accounting"]
+    del block["delivery_verification"]
+    del block["transmission_attempts_may_exceed_count"]
+
+    result = parse(record(egress=block))
+
+    assert result.egress.transmission_basis is None
+    assert result.egress.submission_count == 2
+    assert not result.egress.delivery_established

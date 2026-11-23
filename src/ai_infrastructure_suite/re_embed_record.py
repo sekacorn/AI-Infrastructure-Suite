@@ -42,6 +42,18 @@ MAX_TOP_K: Final = 1000
 MAX_FAILURES: Final = 20
 
 AVAILABILITY: Final = frozenset({"open_weight_self_hostable", "vendor_only"})
+HOSTING_MODE: Final = frozenset({"local", "hosted"})
+PRIVACY_CLASSIFICATION: Final = frozenset(
+    {"public", "internal", "confidential", "restricted", "unknown"}
+)
+MAX_WARNINGS: Final = 16
+EXECUTOR_KIND: Final = frozenset({"local_builtin", "external_unverified"})
+EXECUTION_VERIFICATION: Final = frozenset({"registry_owned", "attested"})
+TRANSMISSION_BASIS: Final = frozenset({"handed_to_executor", "no_transmission"})
+TRANSMISSION_ACCOUNTING: Final = frozenset({"distinct_records_in_completed_batches"})
+DELIVERY_VERIFICATION: Final = frozenset({"unverified"})
+NETWORK_BEHAVIOR_VERIFICATION: Final = frozenset({"attested"})
+MAX_ENDPOINT_CHARS: Final = 2048
 QUALITY_STATUS: Final = frozenset({"sampled", "below_threshold", "unjudged", "not_measured"})
 QUALITY_MODE: Final = frozenset({"record_anchored", "text"})
 METRIC_BASIS: Final = frozenset({"neighborhood_agreement", "retrieval_relevance"})
@@ -161,6 +173,78 @@ class Egress:
     provider: str | None
     records_transmitted: int
     raw_source_text_transmitted: bool
+    executor_kind: str | None = None
+    execution_verification: str | None = None
+    external_execution_confirmed: bool | None = None
+    executor_id: str | None = None
+    endpoint_origin: str | None = None
+    network_behavior_verification: str | None = None
+    records_submitted_to_external_executor: int | None = None
+    transmission_basis: str | None = None
+    transmission_accounting: str | None = None
+    transmission_attempts_may_exceed_count: bool | None = None
+    delivery_verification: str | None = None
+    hosting_mode: str | None = None
+    hosted_execution_confirmed: bool | None = None
+    dataset_privacy_classification: str | None = None
+    redaction_applied: bool | None = None
+    telemetry_enabled: bool | None = None
+    warnings: tuple[str, ...] = ()
+
+    @property
+    def stayed_local(self) -> bool:
+        """Whether nothing left the machine.
+
+        Read from the facts rather than from ``hosting_mode``: a run can be
+        configured as hosted, be blocked, and transmit nothing.
+        """
+        return not self.remote_provider_used and self.records_transmitted == 0
+
+    @property
+    def used_external_executor(self) -> bool:
+        """Whether operator-supplied code ran the embedder."""
+        return self.executor_kind == "external_unverified"
+
+    @property
+    def delivery_established(self) -> bool:
+        """Always false.
+
+        A record can say what was handed to a callable. Nothing in this format
+        can say a provider received it, so this exists to be called rather
+        than to be inferred from a count.
+        """
+        return False
+
+    @property
+    def submission_count(self) -> int:
+        """Distinct records handed to an injected executor.
+
+        Zero for a registry-owned run, which hands nothing to anything. Falls
+        back to ``records_transmitted`` for a record written before the
+        explicit field existed.
+        """
+        if self.records_submitted_to_external_executor is not None:
+            return self.records_submitted_to_external_executor
+        return self.records_transmitted if self.used_external_executor else 0
+
+    @property
+    def unverifiable_claims(self) -> tuple[str, ...]:
+        """The parts of this block no scanner can check.
+
+        Classification and redaction are judgements about content that only the
+        operator can make. An injected executor's network behaviour is code
+        this scanner never ran. Reporting any of them as facts would make an
+        attestation look like a measurement.
+        """
+        claims = []
+        if self.dataset_privacy_classification is not None:
+            claims.append("dataset privacy classification")
+        if self.redaction_applied is not None:
+            claims.append("whether transmitted text was redacted")
+        if self.used_external_executor:
+            claims.append("injected executor network behaviour")
+            claims.append("whether any provider received a submitted record")
+        return tuple(claims)
 
 
 @dataclass(frozen=True)
@@ -258,6 +342,10 @@ class ReEmbedRecord:
         summary = self.quality.threshold_summary() if self.quality is not None else None
         if summary is not None:
             claims.append(summary)
+        # No scanner can read source text and tell whether an organisation
+        # considers it confidential, or whether a redaction removed what the
+        # operator thinks it removed.
+        claims.extend(self.egress.unverifiable_claims)
         return tuple(claims)
 
     def label(self, *, rebuild_reproduced: bool) -> str:
@@ -475,10 +563,133 @@ def _coverage(raw: object) -> Coverage:
     )
 
 
+def _warnings(raw: object) -> tuple[str, ...]:
+    if not isinstance(raw, list):
+        raise ReEmbedRecordError("Invalid egress warnings.")
+    if len(raw) > MAX_WARNINGS:
+        raise ReEmbedRecordError("Too many egress warnings listed.")
+    return tuple(_text(item, "egress warning", MAX_REASON_CHARS) for item in raw)
+
+
+def _check_executor_consistency(
+    *,
+    kind: str | None,
+    execution: str | None,
+    external_confirmed: bool | None,
+    executor_id: str | None,
+    endpoint: str | None,
+    network: str | None,
+    submitted: int | None,
+    basis: str | None,
+    accounting: str | None,
+    may_exceed: bool | None,
+    delivery: str | None,
+    used: bool,
+    transmitted: int,
+) -> None:
+    """Refuse an egress block whose executor fields contradict each other.
+
+    A reader that accepted these independently would accept a record claiming
+    registry-owned code handed payloads to a provider, or one reporting a
+    transmission with no basis for the number. Every rule here is derivable
+    from the others, so none of them asks the reader to trust the writer.
+    """
+    external = kind == "external_unverified"
+    local_builtin = kind == "local_builtin"
+
+    # Only operator-supplied code can be the subject of an external claim.
+    if local_builtin:
+        for value, name in (
+            (executor_id, "executor_id"),
+            (endpoint, "endpoint_origin"),
+            (network, "network_behavior_verification"),
+            (accounting, "transmission_accounting"),
+            (delivery, "delivery_verification"),
+        ):
+            if value is not None:
+                raise ReEmbedRecordError(f"A local_builtin run cannot declare {name}.")
+        if may_exceed:
+            raise ReEmbedRecordError(
+                "A local_builtin run hands nothing over, so attempts cannot exceed a count."
+            )
+        if submitted:
+            raise ReEmbedRecordError(
+                "A local_builtin run cannot report records submitted to an external executor."
+            )
+        if external_confirmed:
+            raise ReEmbedRecordError(
+                "A local_builtin run cannot report external execution consent."
+            )
+        if basis is not None and basis != "no_transmission":
+            raise ReEmbedRecordError("A local_builtin run must report a no_transmission basis.")
+        if execution is not None and execution != "registry_owned":
+            raise ReEmbedRecordError("A local_builtin run must report registry_owned execution.")
+        if transmitted:
+            raise ReEmbedRecordError("A local_builtin run cannot report transmitted records.")
+
+    if external:
+        # Code this scanner never ran cannot be described as anything but
+        # attested, however the operator labels it.
+        if execution is not None and execution != "attested":
+            raise ReEmbedRecordError("An external_unverified run must report attested execution.")
+        if network is not None and network != "attested":
+            raise ReEmbedRecordError(
+                "An external_unverified run must report attested network behaviour."
+            )
+        if executor_id is None:
+            raise ReEmbedRecordError("An external_unverified run must name its executor.")
+        if basis is not None and basis != "handed_to_executor":
+            raise ReEmbedRecordError(
+                "An external_unverified run must report a handed_to_executor basis."
+            )
+        # Default-deny: nothing may have been handed over unenabled.
+        if external_confirmed is False and (submitted or transmitted):
+            raise ReEmbedRecordError(
+                "An external run cannot report submitted records "
+                "without external execution consent."
+            )
+
+    # A basis is deliberately not required when a count is present. A record
+    # written before the field existed is still valid, which is what additive
+    # has to mean; requiring it here would reject evidence this reader used to
+    # accept. The writer always emits it, and PrivateAIStack's contract test
+    # enforces that end of the bargain.
+    if transmitted and basis == "no_transmission":
+        raise ReEmbedRecordError("A no_transmission basis cannot accompany transmitted records.")
+    # Transmission is a subset of submission: a payload reaches a provider only
+    # by way of the executor it was handed to.
+    if submitted is not None and transmitted > submitted:
+        raise ReEmbedRecordError("More records transmitted than were submitted to the executor.")
+    if used and kind is not None and not external:
+        raise ReEmbedRecordError(
+            "Only an external_unverified executor can have used a remote provider."
+        )
+
+
 def _egress(raw: object) -> Egress:
     document = _mapping(raw, "egress")
     required = {"remote_provider_used", "records_transmitted", "raw_source_text_transmitted"}
-    if not required <= set(document) or set(document) - (required | {"provider"}):
+    optional = {
+        "provider",
+        "hosting_mode",
+        "hosted_execution_confirmed",
+        "dataset_privacy_classification",
+        "redaction_applied",
+        "telemetry_enabled",
+        "warnings",
+        "executor_kind",
+        "execution_verification",
+        "external_execution_confirmed",
+        "executor_id",
+        "endpoint_origin",
+        "network_behavior_verification",
+        "records_submitted_to_external_executor",
+        "transmission_basis",
+        "transmission_accounting",
+        "transmission_attempts_may_exceed_count",
+        "delivery_verification",
+    }
+    if not required <= set(document) or set(document) - (required | optional):
         raise ReEmbedRecordError("Unexpected fields in egress.")
     used = _flag(document["remote_provider_used"], "remote_provider_used")
     provider = document.get("provider")
@@ -490,11 +701,156 @@ def _egress(raw: object) -> Egress:
         raise ReEmbedRecordError("A local run cannot report transmitted content.")
     if used and provider is None:
         raise ReEmbedRecordError("A remote run must name its provider.")
+
+    mode = (
+        None
+        if "hosting_mode" not in document
+        else _enum(document["hosting_mode"], HOSTING_MODE, "egress hosting_mode")
+    )
+    confirmed = (
+        None
+        if "hosted_execution_confirmed" not in document
+        else _flag(document["hosted_execution_confirmed"], "hosted_execution_confirmed")
+    )
+    classification = (
+        None
+        if "dataset_privacy_classification" not in document
+        else _enum(
+            document["dataset_privacy_classification"],
+            PRIVACY_CLASSIFICATION,
+            "egress dataset_privacy_classification",
+        )
+    )
+    # Nothing may have left the machine without the operator having enabled it.
+    # Enforcing it here is what makes an un-opted remote run unrepresentable
+    # rather than merely discouraged by the tool that writes the record.
+    if used and confirmed is False:
+        raise ReEmbedRecordError(
+            "A remote run cannot report that hosted execution was not confirmed."
+        )
+    if used and mode == "local":
+        raise ReEmbedRecordError("A run that transmitted records cannot report local hosting.")
+
+    kind = (
+        None
+        if "executor_kind" not in document
+        else _enum(document["executor_kind"], EXECUTOR_KIND, "egress executor_kind")
+    )
+    execution = (
+        None
+        if "execution_verification" not in document
+        else _enum(
+            document["execution_verification"],
+            EXECUTION_VERIFICATION,
+            "egress execution_verification",
+        )
+    )
+    external_confirmed = (
+        None
+        if "external_execution_confirmed" not in document
+        else _flag(document["external_execution_confirmed"], "external_execution_confirmed")
+    )
+    executor_id = (
+        None
+        if "executor_id" not in document
+        else _text(document["executor_id"], "egress executor_id")
+    )
+    endpoint = (
+        None
+        if "endpoint_origin" not in document
+        else _text(document["endpoint_origin"], "egress endpoint_origin", MAX_ENDPOINT_CHARS)
+    )
+    network = (
+        None
+        if "network_behavior_verification" not in document
+        else _enum(
+            document["network_behavior_verification"],
+            NETWORK_BEHAVIOR_VERIFICATION,
+            "egress network_behavior_verification",
+        )
+    )
+    submitted = (
+        None
+        if "records_submitted_to_external_executor" not in document
+        else _count(
+            document["records_submitted_to_external_executor"],
+            "records_submitted_to_external_executor",
+        )
+    )
+    basis = (
+        None
+        if "transmission_basis" not in document
+        else _enum(document["transmission_basis"], TRANSMISSION_BASIS, "egress transmission_basis")
+    )
+    accounting = (
+        None
+        if "transmission_accounting" not in document
+        else _enum(
+            document["transmission_accounting"],
+            TRANSMISSION_ACCOUNTING,
+            "egress transmission_accounting",
+        )
+    )
+    may_exceed = (
+        None
+        if "transmission_attempts_may_exceed_count" not in document
+        else _flag(
+            document["transmission_attempts_may_exceed_count"],
+            "transmission_attempts_may_exceed_count",
+        )
+    )
+    delivery = (
+        None
+        if "delivery_verification" not in document
+        else _enum(
+            document["delivery_verification"], DELIVERY_VERIFICATION, "egress delivery_verification"
+        )
+    )
+    _check_executor_consistency(
+        kind=kind,
+        execution=execution,
+        external_confirmed=external_confirmed,
+        executor_id=executor_id,
+        endpoint=endpoint,
+        network=network,
+        submitted=submitted,
+        basis=basis,
+        accounting=accounting,
+        may_exceed=may_exceed,
+        delivery=delivery,
+        used=used,
+        transmitted=transmitted,
+    )
     return Egress(
         remote_provider_used=used,
         provider=None if provider is None else _text(provider, "egress provider"),
         records_transmitted=transmitted,
         raw_source_text_transmitted=raw_text,
+        hosting_mode=mode,
+        hosted_execution_confirmed=confirmed,
+        dataset_privacy_classification=classification,
+        redaction_applied=(
+            None
+            if "redaction_applied" not in document
+            else _flag(document["redaction_applied"], "redaction_applied")
+        ),
+        telemetry_enabled=(
+            None
+            if "telemetry_enabled" not in document
+            else _flag(document["telemetry_enabled"], "telemetry_enabled")
+        ),
+        warnings=() if "warnings" not in document else _warnings(document["warnings"]),
+        executor_kind=kind,
+        execution_verification=execution,
+        external_execution_confirmed=external_confirmed,
+        executor_id=executor_id,
+        endpoint_origin=endpoint,
+        network_behavior_verification=network,
+        records_submitted_to_external_executor=submitted,
+        transmission_basis=basis,
+        transmission_accounting=accounting,
+        transmission_attempts_may_exceed_count=may_exceed,
+        delivery_verification=delivery,
     )
 
 
