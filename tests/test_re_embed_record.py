@@ -28,6 +28,8 @@ from ai_infrastructure_suite.re_embed_record import (
 
 EXAMPLE = Path(__file__).parents[1] / "docs/examples/re-embed-record/re-embed-record.json"
 
+UNREDACTED_WARNING = "private unredacted dataset content would be transmitted to a hosted provider"
+
 SOURCE_DIGEST = "a" * 64
 TARGET_DIGEST = "b" * 64
 
@@ -509,6 +511,103 @@ def test_unlisted_failures_without_a_truncation_flag_are_refused() -> None:
                 },
             )
         )
+
+
+def hosted_egress(**overrides: Any) -> dict[str, Any]:
+    """An egress block for a run the operator explicitly allowed."""
+    block: dict[str, Any] = {
+        "remote_provider_used": True,
+        "provider": "example-hosted-embeddings",
+        "records_transmitted": 2,
+        "raw_source_text_transmitted": True,
+        "hosting_mode": "hosted",
+        "hosted_execution_confirmed": True,
+        "dataset_privacy_classification": "internal",
+        "redaction_applied": False,
+        "telemetry_enabled": False,
+        "warnings": [UNREDACTED_WARNING],
+    }
+    block.update(overrides)
+    return block
+
+
+def test_a_local_run_reports_that_nothing_left_the_machine() -> None:
+    result = parse(record())
+
+    assert result.egress.stayed_local
+    assert not result.egress.remote_provider_used
+    assert result.egress.unverifiable_claims == ()
+
+
+def test_a_hosted_run_records_the_opt_in_and_the_warnings_the_operator_saw() -> None:
+    result = parse(record(egress=hosted_egress()))
+
+    assert not result.egress.stayed_local
+    assert result.egress.hosting_mode == "hosted"
+    assert result.egress.hosted_execution_confirmed
+    assert result.egress.dataset_privacy_classification == "internal"
+    assert result.egress.warnings == (UNREDACTED_WARNING,)
+
+
+def test_the_classification_and_redaction_are_attested_not_checked() -> None:
+    result = parse(record(egress=hosted_egress()))
+
+    claims = result.attested_claims()
+    assert "dataset privacy classification" in claims
+    assert "whether transmitted text was redacted" in claims
+
+
+def test_a_blocked_hosted_run_that_transmitted_nothing_is_valid() -> None:
+    # Configured as hosted, refused, nothing sent. The record has to be able to
+    # say that, or a blocked attempt looks identical to no attempt.
+    blocked = {
+        "remote_provider_used": False,
+        "records_transmitted": 0,
+        "raw_source_text_transmitted": False,
+        "hosting_mode": "hosted",
+        "hosted_execution_confirmed": False,
+        "warnings": ["hosted execution is blocked until explicitly enabled"],
+    }
+
+    result = parse(record(egress=blocked))
+
+    assert result.egress.stayed_local
+    assert result.egress.hosting_mode == "hosted"
+    assert not result.egress.hosted_execution_confirmed
+
+
+def test_a_remote_run_without_the_opt_in_is_unrepresentable() -> None:
+    # The whole point of 3b-5: a run cannot report that it transmitted content
+    # the operator never enabled.
+    with pytest.raises(ReEmbedRecordError, match="hosted execution was not confirmed"):
+        parse(record(egress=hosted_egress(hosted_execution_confirmed=False)))
+
+
+def test_a_transmitting_run_claiming_local_hosting_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="cannot report local hosting"):
+        parse(record(egress=hosted_egress(hosting_mode="local")))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("hosting_mode", "serverless"),
+        ("dataset_privacy_classification", "top-secret"),
+    ),
+)
+def test_an_unknown_egress_enum_value_is_refused(field: str, value: str) -> None:
+    with pytest.raises(ReEmbedRecordError, match=f"egress {field}"):
+        parse(record(egress=hosted_egress(**{field: value})))
+
+
+def test_too_many_egress_warnings_are_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="Too many egress warnings"):
+        parse(record(egress=hosted_egress(warnings=[f"warning {index}" for index in range(17)])))
+
+
+def test_an_unknown_egress_field_is_still_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="Unexpected fields in egress"):
+        parse(record(egress=hosted_egress(region="eu-west-1")))
 
 
 def test_a_local_run_claiming_transmitted_content_is_refused() -> None:

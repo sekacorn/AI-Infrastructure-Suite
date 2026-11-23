@@ -13,6 +13,43 @@ record.label(rebuild_reproduced=False)  # 'attested'
 record.attested_claims()
 ```
 
+## The egress block
+
+What left the machine. Local and offline is the default, and a run that
+transmitted anything must say so here.
+
+| Field | Says | Checked? |
+|---|---|---|
+| `remote_provider_used` | Whether a remote provider ran at all. | — |
+| `provider` | Which one. Required when `remote_provider_used`. | — |
+| `records_transmitted` | How many records' text was sent. | — |
+| `raw_source_text_transmitted` | Whether the text went unredacted. | — |
+| `hosting_mode` | `local` or `hosted`. `local` means no socket was opened. | — |
+| `hosted_execution_confirmed` | Whether the operator explicitly enabled hosted execution. | — |
+| `dataset_privacy_classification` | The operator's classification of the source text. | **No. Attested.** |
+| `redaction_applied` | Whether the operator states the text was redacted. | **No. Attested.** |
+| `telemetry_enabled` | Whether provider telemetry was left on. | — |
+| `warnings` | The preflight warnings the operator was shown. | — |
+
+The last two attested fields appear in `attested_claims()`. No scanner can read
+source text and tell whether an organisation considers it confidential, or
+whether a redaction removed what the operator thinks it removed, and reporting
+either as a fact would make an attestation look like a measurement.
+
+### A remote run without the opt-in is unrepresentable
+
+The reader refuses a record that reports transmitted content with
+`hosted_execution_confirmed: false`, and refuses one that reports transmitting
+while claiming `hosting_mode: local`. The rule lives here rather than only in
+the tool that writes records, so a tool that skipped its own gate still cannot
+produce a readable record of having done so.
+
+A run configured as hosted, blocked, and transmitting nothing is valid and
+expected: `remote_provider_used: false` with `hosting_mode: hosted` and the
+blocking warning. Without that shape a refused attempt would look identical to
+no attempt. `Egress.stayed_local` reads the facts — used and count — rather
+than `hosting_mode`, for exactly that reason.
+
 ## The quality block
 
 `quality` is absent when no comparison was attempted. That absence is not

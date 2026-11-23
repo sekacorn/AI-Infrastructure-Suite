@@ -133,7 +133,33 @@
         "remote_provider_used": { "type": "boolean" },
         "provider": { "type": "string", "minLength": 1, "maxLength": 128 },
         "records_transmitted": { "type": "integer", "minimum": 0 },
-        "raw_source_text_transmitted": { "type": "boolean" }
+        "raw_source_text_transmitted": { "type": "boolean" },
+        "hosting_mode": {
+          "description": "Where the embedder ran. local means no socket was opened at all.",
+          "enum": ["local", "hosted"]
+        },
+        "hosted_execution_confirmed": {
+          "description": "Whether the operator explicitly enabled hosted execution. A run that transmitted anything must have this, which is what makes an un-opted remote run unrepresentable rather than merely discouraged.",
+          "type": "boolean"
+        },
+        "dataset_privacy_classification": {
+          "description": "The operator's classification of the source text. Attested, never checked: no scanner can read text and tell whether an organisation considers it confidential.",
+          "enum": ["public", "internal", "confidential", "restricted", "unknown"]
+        },
+        "redaction_applied": {
+          "description": "Whether the operator states the transmitted text was redacted. Attested. A redaction nobody can verify is still better recorded than assumed.",
+          "type": "boolean"
+        },
+        "telemetry_enabled": {
+          "description": "Whether provider telemetry was left on for the run.",
+          "type": "boolean"
+        },
+        "warnings": {
+          "description": "The preflight warnings the operator was shown before the run. Recorded so a reader sees the same sentences the operator did, rather than having to re-derive them.",
+          "type": "array",
+          "maxItems": 16,
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
       }
     },
     "quality": {

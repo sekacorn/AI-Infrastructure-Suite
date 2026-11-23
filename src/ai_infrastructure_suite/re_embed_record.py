@@ -42,6 +42,11 @@ MAX_TOP_K: Final = 1000
 MAX_FAILURES: Final = 20
 
 AVAILABILITY: Final = frozenset({"open_weight_self_hostable", "vendor_only"})
+HOSTING_MODE: Final = frozenset({"local", "hosted"})
+PRIVACY_CLASSIFICATION: Final = frozenset(
+    {"public", "internal", "confidential", "restricted", "unknown"}
+)
+MAX_WARNINGS: Final = 16
 QUALITY_STATUS: Final = frozenset({"sampled", "below_threshold", "unjudged", "not_measured"})
 QUALITY_MODE: Final = frozenset({"record_anchored", "text"})
 METRIC_BASIS: Final = frozenset({"neighborhood_agreement", "retrieval_relevance"})
@@ -161,6 +166,36 @@ class Egress:
     provider: str | None
     records_transmitted: int
     raw_source_text_transmitted: bool
+    hosting_mode: str | None = None
+    hosted_execution_confirmed: bool | None = None
+    dataset_privacy_classification: str | None = None
+    redaction_applied: bool | None = None
+    telemetry_enabled: bool | None = None
+    warnings: tuple[str, ...] = ()
+
+    @property
+    def stayed_local(self) -> bool:
+        """Whether nothing left the machine.
+
+        Read from the facts rather than from ``hosting_mode``: a run can be
+        configured as hosted, be blocked, and transmit nothing.
+        """
+        return not self.remote_provider_used and self.records_transmitted == 0
+
+    @property
+    def unverifiable_claims(self) -> tuple[str, ...]:
+        """The parts of this block no scanner can check.
+
+        Classification and redaction are judgements about content that only the
+        operator can make. Reporting them as facts would make an attestation
+        look like a measurement.
+        """
+        claims = []
+        if self.dataset_privacy_classification is not None:
+            claims.append("dataset privacy classification")
+        if self.redaction_applied is not None:
+            claims.append("whether transmitted text was redacted")
+        return tuple(claims)
 
 
 @dataclass(frozen=True)
@@ -258,6 +293,10 @@ class ReEmbedRecord:
         summary = self.quality.threshold_summary() if self.quality is not None else None
         if summary is not None:
             claims.append(summary)
+        # No scanner can read source text and tell whether an organisation
+        # considers it confidential, or whether a redaction removed what the
+        # operator thinks it removed.
+        claims.extend(self.egress.unverifiable_claims)
         return tuple(claims)
 
     def label(self, *, rebuild_reproduced: bool) -> str:
@@ -475,10 +514,27 @@ def _coverage(raw: object) -> Coverage:
     )
 
 
+def _warnings(raw: object) -> tuple[str, ...]:
+    if not isinstance(raw, list):
+        raise ReEmbedRecordError("Invalid egress warnings.")
+    if len(raw) > MAX_WARNINGS:
+        raise ReEmbedRecordError("Too many egress warnings listed.")
+    return tuple(_text(item, "egress warning", MAX_REASON_CHARS) for item in raw)
+
+
 def _egress(raw: object) -> Egress:
     document = _mapping(raw, "egress")
     required = {"remote_provider_used", "records_transmitted", "raw_source_text_transmitted"}
-    if not required <= set(document) or set(document) - (required | {"provider"}):
+    optional = {
+        "provider",
+        "hosting_mode",
+        "hosted_execution_confirmed",
+        "dataset_privacy_classification",
+        "redaction_applied",
+        "telemetry_enabled",
+        "warnings",
+    }
+    if not required <= set(document) or set(document) - (required | optional):
         raise ReEmbedRecordError("Unexpected fields in egress.")
     used = _flag(document["remote_provider_used"], "remote_provider_used")
     provider = document.get("provider")
@@ -490,11 +546,54 @@ def _egress(raw: object) -> Egress:
         raise ReEmbedRecordError("A local run cannot report transmitted content.")
     if used and provider is None:
         raise ReEmbedRecordError("A remote run must name its provider.")
+
+    mode = (
+        None
+        if "hosting_mode" not in document
+        else _enum(document["hosting_mode"], HOSTING_MODE, "egress hosting_mode")
+    )
+    confirmed = (
+        None
+        if "hosted_execution_confirmed" not in document
+        else _flag(document["hosted_execution_confirmed"], "hosted_execution_confirmed")
+    )
+    classification = (
+        None
+        if "dataset_privacy_classification" not in document
+        else _enum(
+            document["dataset_privacy_classification"],
+            PRIVACY_CLASSIFICATION,
+            "egress dataset_privacy_classification",
+        )
+    )
+    # Nothing may have left the machine without the operator having enabled it.
+    # Enforcing it here is what makes an un-opted remote run unrepresentable
+    # rather than merely discouraged by the tool that writes the record.
+    if used and confirmed is False:
+        raise ReEmbedRecordError(
+            "A remote run cannot report that hosted execution was not confirmed."
+        )
+    if used and mode == "local":
+        raise ReEmbedRecordError("A run that transmitted records cannot report local hosting.")
     return Egress(
         remote_provider_used=used,
         provider=None if provider is None else _text(provider, "egress provider"),
         records_transmitted=transmitted,
         raw_source_text_transmitted=raw_text,
+        hosting_mode=mode,
+        hosted_execution_confirmed=confirmed,
+        dataset_privacy_classification=classification,
+        redaction_applied=(
+            None
+            if "redaction_applied" not in document
+            else _flag(document["redaction_applied"], "redaction_applied")
+        ),
+        telemetry_enabled=(
+            None
+            if "telemetry_enabled" not in document
+            else _flag(document["telemetry_enabled"], "telemetry_enabled")
+        ),
+        warnings=() if "warnings" not in document else _warnings(document["warnings"]),
     )
 
 
