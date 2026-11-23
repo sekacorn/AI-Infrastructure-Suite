@@ -159,6 +159,55 @@
           "type": "array",
           "maxItems": 16,
           "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        },
+        "executor_kind": {
+          "description": "Which trust boundary ran the embedder. local_builtin is package code selected from the registry. external_unverified is operator-supplied code, which may use providers, proxies, redirects or telemetry that no scanner can observe.",
+          "enum": ["local_builtin", "external_unverified"]
+        },
+        "execution_verification": {
+          "description": "registry_owned: the implementation is package code selected internally. attested: an operator declaration about code this scanner did not run and cannot inspect. Neither value asserts OS-enforced network isolation.",
+          "enum": ["registry_owned", "attested"]
+        },
+        "external_execution_confirmed": {
+          "description": "Whether the operator explicitly permitted an injected executor. Default-deny: a run that handed anything to one must have this.",
+          "type": "boolean"
+        },
+        "executor_id": {
+          "description": "The operator's identifier for the injected executor. A label, never a verified identity.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "endpoint_origin": {
+          "description": "The scheme and authority of the endpoint the operator declared, with no path, query, credentials or fragment. An injected executor can ignore it entirely, so this is a declaration and never a proven network route.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "network_behavior_verification": {
+          "description": "Always attested for an injected executor. This package cannot sandbox arbitrary code, so its network behaviour is never scanner-verified.",
+          "enum": ["attested"]
+        },
+        "records_submitted_to_external_executor": {
+          "description": "Distinct records handed to the injected executor, counted from durable completed batches. Submission, not delivery.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "transmission_basis": {
+          "description": "What a transmission count counts. handed_to_executor: records this pipeline passed to the executor callable. no_transmission: a registry-owned embedder ran and nothing was handed to anything. Neither value ever means a provider received a record.",
+          "enum": ["handed_to_executor", "no_transmission"]
+        },
+        "transmission_accounting": {
+          "description": "The exact basis of the count: distinct records represented by durable completed checkpoint batches.",
+          "enum": ["distinct_records_in_completed_batches"]
+        },
+        "transmission_attempts_may_exceed_count": {
+          "description": "True whenever an injected executor ran. An executor may retry internally where the pipeline cannot see it, and a crash before a checkpoint reaches disk discards a batch whose records were already handed over, so a resume hands them again. The count is therefore a lower bound on attempts.",
+          "type": "boolean"
+        },
+        "delivery_verification": {
+          "description": "Always unverified. This pipeline hands a payload to a callable and cannot observe what that callable does next, so no record may assert that a provider received anything. There is deliberately no other value.",
+          "enum": ["unverified"]
         }
       }
     },
