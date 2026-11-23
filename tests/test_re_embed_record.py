@@ -83,6 +83,7 @@ def sampled_quality(**overrides: Any) -> dict[str, Any]:
         "anchor_selection": "seeded_random",
         "anchor_seed": "re-embed-quality",
         "similarity": "cosine",
+        "candidate_pool_size": 64,
         "thresholds": {"minimum_top_k_overlap": 0.7},
         "metrics": {"top_k_overlap": 0.8, "mrr": 0.7, "mrr_before": 0.72},
         "checks": [
@@ -662,6 +663,19 @@ def test_too_many_thresholds_are_refused() -> None:
 def test_a_non_numeric_threshold_is_refused() -> None:
     with pytest.raises(ReEmbedRecordError, match="threshold"):
         parse(record(quality=sampled_quality(thresholds={"minimum_top_k_overlap": "high"})))
+
+
+def test_a_candidate_pool_of_zero_is_refused() -> None:
+    # Every query was ranked against something, or no query was ranked.
+    with pytest.raises(ReEmbedRecordError, match="candidate_pool_size"):
+        parse(record(quality=sampled_quality(candidate_pool_size=0)))
+
+
+def test_the_candidate_pool_size_is_read_back() -> None:
+    result = parse(record(quality=sampled_quality()))
+
+    assert result.quality is not None
+    assert result.quality.candidate_pool_size == 64
 
 
 def test_a_negative_boundary_tie_count_is_refused() -> None:

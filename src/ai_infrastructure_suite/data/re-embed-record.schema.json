@@ -177,6 +177,11 @@
           "propertyNames": { "type": "string", "minLength": 1, "maxLength": 128 },
           "additionalProperties": { "type": "number" }
         },
+        "candidate_pool_size": {
+          "description": "How many records each query was ranked against. Smaller than the store when the pool was drawn, by the same seed, to keep the comparison bounded. A top_k_overlap is a share of this pool, not of the store.",
+          "type": "integer",
+          "minimum": 1
+        },
         "tie_break": {
           "description": "How equal similarities were ordered, so a reader can tell a tie from a disagreement.",
           "type": "string",

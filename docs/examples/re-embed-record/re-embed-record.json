@@ -44,6 +44,7 @@
     "anchor_selection": "seeded_random",
     "anchor_seed": "re-embed-quality",
     "similarity": "cosine",
+    "candidate_pool_size": 64,
     "tie_break": "ascending record_id among equal similarities",
     "boundary_ties": 2,
     "queries_skipped": 0,

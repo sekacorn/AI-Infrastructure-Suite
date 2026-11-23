@@ -44,6 +44,7 @@ valid became invalid.
 | `anchor_seed` | The seed the draw used. Required for `seeded_random`, refused otherwise. |
 | `similarity` | The similarity function the ranking used. |
 | `thresholds` | The bar each check was judged against, by name. |
+| `candidate_pool_size` | How many records each query was ranked against. `top_k_overlap` is a share of this pool, not of the whole store. |
 | `tie_break` | How equal similarities were ordered. |
 | `boundary_ties` | Queries whose top-k boundary fell inside a run of equal similarities. |
 | `queries_skipped` | Queries declared but not evaluable. |

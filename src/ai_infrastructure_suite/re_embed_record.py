@@ -177,6 +177,7 @@ class Quality:
     anchor_selection: str | None = None
     anchor_seed: str | None = None
     similarity: str | None = None
+    candidate_pool_size: int | None = None
     thresholds: dict[str, float] | None = None
     tie_break: str | None = None
     boundary_ties: int | None = None
@@ -533,6 +534,7 @@ def _quality(raw: object) -> Quality:
         "anchor_selection",
         "anchor_seed",
         "similarity",
+        "candidate_pool_size",
         "thresholds",
         "tie_break",
         "boundary_ties",
@@ -619,6 +621,11 @@ def _quality(raw: object) -> Quality:
         else _enum(document["similarity"], SIMILARITY, "quality similarity")
     )
     thresholds = None if "thresholds" not in document else _thresholds(document["thresholds"])
+    pool = None
+    if "candidate_pool_size" in document:
+        pool = _count(document["candidate_pool_size"], "candidate_pool_size")
+        if pool < 1:
+            raise ReEmbedRecordError("Invalid candidate_pool_size.")
 
     # Record-anchored queries rank a store by one of its own vectors, so what
     # they can show is agreement between two neighborhoods, never relevance.
@@ -659,6 +666,7 @@ def _quality(raw: object) -> Quality:
         anchor_selection=selection,
         anchor_seed=seed,
         similarity=similarity,
+        candidate_pool_size=pool,
         thresholds=thresholds,
         tie_break=(
             None
