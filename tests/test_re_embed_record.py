@@ -19,6 +19,7 @@ from ai_infrastructure_suite.re_embed_record import (
     ATTESTED_CLAIMS,
     DEFAULT_BATCH_SIZE,
     KNOWN_SCHEMES,
+    QUALITY_STATUS,
     SCHEMA_VERSION,
     ReEmbedRecordError,
     load_re_embed_record,
@@ -216,17 +217,32 @@ def test_a_record_without_thresholds_lists_only_the_fixed_claims() -> None:
 # --- Labels and scoring -----------------------------------------------------
 
 
+def unjudged_quality(**overrides: Any) -> dict[str, Any]:
+    """A comparison that measured and was held against no agreement floor."""
+    quality = sampled_quality(
+        status="unjudged",
+        thresholds={"minimum_sample_size": 20},
+        checks=[{"name": "minimum_sample_size", "passed": True, "actual": 24.0, "threshold": 20.0}],
+        notes="No agreement floor was declared. Declare minimum_top_k_overlap to get a verdict.",
+    )
+    quality.update(overrides)
+    return quality
+
+
 @pytest.mark.parametrize(
     ("status", "expected"),
     (
         ("sampled", "verified (re-embedded, quality sampled)"),
         ("below_threshold", "verified (re-embedded, quality below threshold)"),
+        ("unjudged", "verified (re-embedded, quality unjudged)"),
         ("not_measured", "verified (re-embedded, quality not measured)"),
     ),
 )
 def test_each_quality_status_maps_to_its_label(status: str, expected: str) -> None:
     if status == "sampled":
         quality = sampled_quality()
+    elif status == "unjudged":
+        quality = unjudged_quality()
     elif status == "below_threshold":
         quality = sampled_quality(
             status="below_threshold",
@@ -341,6 +357,35 @@ def test_record_anchored_agreement_is_never_user_search_quality() -> None:
     assert result.quality is not None
     assert result.quality.metric_basis == "neighborhood_agreement"
     assert not result.quality.measures_user_search_quality
+
+
+def test_an_unjudged_record_reports_its_metrics_and_moves_no_score() -> None:
+    result = parse(record(quality=unjudged_quality()))
+
+    assert result.quality is not None
+    assert not result.quality.judged
+    assert not result.quality.passed
+    # The numbers are real even though the verdict does not exist.
+    assert result.quality.metrics["top_k_overlap"] == 0.8
+    assert result.label(rebuild_reproduced=True) == "verified (re-embedded, quality unjudged)"
+    assert not result.improves_score(rebuild_reproduced=True)
+
+
+def test_an_unjudged_record_still_lists_its_attested_claims() -> None:
+    result = parse(record(quality=unjudged_quality()))
+
+    claims = result.attested_claims()
+    assert "operator-declared thresholds: minimum_sample_size 20" in claims
+
+
+def test_a_sampled_and_a_below_threshold_record_are_both_judged() -> None:
+    assert parse(record(quality=sampled_quality())).quality.judged  # type: ignore[union-attr]
+    below = sampled_quality(
+        status="below_threshold",
+        thresholds={"m": 0.7},
+        checks=[{"name": "m", "passed": False, "actual": 0.1, "threshold": 0.7}],
+    )
+    assert parse(record(quality=below)).quality.judged  # type: ignore[union-attr]
 
 
 def test_a_below_threshold_record_is_still_a_verified_label() -> None:
@@ -689,6 +734,49 @@ def test_an_unknown_quality_field_is_still_refused() -> None:
         parse(record(quality=sampled_quality(precision_at_1=0.9)))
 
 
+def test_an_unjudged_result_without_metrics_is_refused() -> None:
+    quality = unjudged_quality()
+    del quality["metrics"]
+
+    with pytest.raises(ReEmbedRecordError, match="requires the metrics it measured"):
+        parse(record(quality=quality))
+
+
+def test_an_unjudged_result_with_a_failed_check_is_refused() -> None:
+    # A measured failure is below_threshold, not an absent verdict.
+    quality = unjudged_quality(
+        thresholds={"m": 0.7},
+        checks=[{"name": "m", "passed": False, "actual": 0.2, "threshold": 0.7}],
+    )
+
+    with pytest.raises(ReEmbedRecordError, match="that is below_threshold"):
+        parse(record(quality=quality))
+
+
+def test_an_unjudged_result_on_an_empty_query_set_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="non-empty query set"):
+        parse(record(quality=unjudged_quality(query_set_size=0)))
+
+
+def test_an_unjudged_result_declaring_insufficient_evidence_is_refused() -> None:
+    with pytest.raises(ReEmbedRecordError, match="that is not_measured"):
+        parse(record(quality=unjudged_quality(sufficient_evidence=False)))
+
+
+@pytest.mark.parametrize("notes", (None, "", "   "))
+def test_an_unjudged_result_that_does_not_say_what_to_declare_is_refused(notes: object) -> None:
+    # Without it the record reads as a dead end rather than as a missing
+    # declaration the operator can supply.
+    quality = unjudged_quality()
+    if notes is None:
+        del quality["notes"]
+    else:
+        quality["notes"] = notes
+
+    with pytest.raises(ReEmbedRecordError, match="what to declare"):
+        parse(record(quality=quality))
+
+
 def test_an_unknown_quality_status_is_refused() -> None:
     with pytest.raises(ReEmbedRecordError, match="Invalid quality status"):
         parse(record(quality=sampled_quality(status="great")))
@@ -715,11 +803,10 @@ def test_the_packaged_schema_matches_the_reader() -> None:
     assert schema["properties"]["schema_version"]["const"] == SCHEMA_VERSION
     assert set(schema["required"]) <= set(document)
     assert not set(document) - set(schema["properties"])
-    assert schema["$defs"]["quality"]["properties"]["status"]["enum"] == [
-        "sampled",
-        "below_threshold",
-        "not_measured",
-    ]
+    # Compared against the reader's own set rather than a copy of the list, so
+    # a status added to one and not the other cannot pass.
+    assert set(schema["$defs"]["quality"]["properties"]["status"]["enum"]) == QUALITY_STATUS
+    assert {"sampled", "below_threshold", "unjudged", "not_measured"} == QUALITY_STATUS
     assert schema["$defs"]["model_identity"]["properties"]["availability_verification"] == {
         "const": "attested"
     }

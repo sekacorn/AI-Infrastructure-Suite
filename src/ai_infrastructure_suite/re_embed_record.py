@@ -42,7 +42,7 @@ MAX_TOP_K: Final = 1000
 MAX_FAILURES: Final = 20
 
 AVAILABILITY: Final = frozenset({"open_weight_self_hostable", "vendor_only"})
-QUALITY_STATUS: Final = frozenset({"sampled", "below_threshold", "not_measured"})
+QUALITY_STATUS: Final = frozenset({"sampled", "below_threshold", "unjudged", "not_measured"})
 QUALITY_MODE: Final = frozenset({"record_anchored", "text"})
 METRIC_BASIS: Final = frozenset({"neighborhood_agreement", "retrieval_relevance"})
 ANCHOR_SELECTION: Final = frozenset({"operator", "seeded_random"})
@@ -190,6 +190,17 @@ class Quality:
         return self.status == "sampled"
 
     @property
+    def judged(self) -> bool:
+        """Whether a verdict was reached at all.
+
+        ``unjudged`` means the comparison ran, produced metrics, and was held
+        against no agreement floor, because the operator declared none. The
+        numbers are real and the verdict does not exist. Reading such a result
+        as a pass would be reading silence as approval.
+        """
+        return self.status in ("sampled", "below_threshold")
+
+    @property
     def reproducible_query_set(self) -> bool:
         """Whether another party can redraw this query set from the record alone.
 
@@ -265,6 +276,7 @@ class ReEmbedRecord:
         return {
             "sampled": "verified (re-embedded, quality sampled)",
             "below_threshold": "verified (re-embedded, quality below threshold)",
+            "unjudged": "verified (re-embedded, quality unjudged)",
             "not_measured": "verified (re-embedded, quality not measured)",
         }[self.quality_status]
 
@@ -596,6 +608,28 @@ def _quality(raw: object) -> Quality:
         raise ReEmbedRecordError(
             "A below-threshold quality result requires at least one failed check."
         )
+    if status == "unjudged":
+        # It measured, so the numbers must be there; it reached no verdict, so
+        # nothing in it may read as one.
+        if not metrics:
+            raise ReEmbedRecordError("An unjudged quality result requires the metrics it measured.")
+        if any(not check["passed"] for check in checks):
+            raise ReEmbedRecordError(
+                "An unjudged quality result cannot contain a failed check; that is below_threshold."
+            )
+        if query_set_size < 1:
+            raise ReEmbedRecordError("An unjudged quality result requires a non-empty query set.")
+        if sufficient is False:
+            raise ReEmbedRecordError(
+                "An unjudged quality result cannot declare insufficient evidence; "
+                "that is not_measured."
+            )
+        if not isinstance(document.get("notes"), str) or not document["notes"].strip():
+            # A result with no verdict has to say what would produce one, or it
+            # reads as a dead end rather than as a missing declaration.
+            raise ReEmbedRecordError(
+                "An unjudged quality result must say in its notes what to declare to get a verdict."
+            )
     if status == "not_measured" and (metrics or checks):
         raise ReEmbedRecordError("An unmeasured quality result cannot carry metrics or checks.")
 
@@ -640,9 +674,10 @@ def _quality(raw: object) -> Quality:
         raise ReEmbedRecordError("A seeded_random query set must record its seed.")
     if selection != "seeded_random" and seed is not None:
         raise ReEmbedRecordError("Only a seeded_random query set may record a seed.")
-    # A verdict without its bar is half a sentence, and the three statuses are
-    # the verdict.
-    judged = status in ("sampled", "below_threshold") and checks and thresholds is not None
+    # A verdict without its bar is half a sentence, and the status is the
+    # verdict.
+    measured = status in ("sampled", "below_threshold", "unjudged")
+    judged = measured and checks and thresholds is not None
     if judged and {check["name"] for check in checks} != set(thresholds or {}):
         raise ReEmbedRecordError("Declared thresholds do not match the checks that were run.")
     if status == "not_measured" and thresholds:

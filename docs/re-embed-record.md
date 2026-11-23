@@ -19,11 +19,24 @@ record.attested_claims()
 `not_measured`: `not_measured` means a comparison was set up and found
 insufficient, and silence means nothing was tried.
 
-| Status | Means |
-|---|---|
-| `sampled` | The comparison ran and every declared threshold was met. |
-| `below_threshold` | The comparison ran and at least one threshold was not met. |
-| `not_measured` | No query set, none usable, or too few queries for sufficient evidence. |
+| Status | Means | Can move 50 → 25 |
+|---|---|---|
+| `sampled` | The comparison ran and every declared threshold was met. | Yes, with the other four conditions |
+| `below_threshold` | The comparison ran and at least one threshold was not met. | No |
+| `unjudged` | The comparison ran and produced metrics, and no agreement floor was declared, so there is no verdict. | No |
+| `not_measured` | No query set, none usable, or too few queries for sufficient evidence. | No |
+
+`Quality.judged` is true only for `sampled` and `below_threshold`.
+
+### `unjudged` is metrics without a verdict
+
+An operator who declares no agreement floor still gets their numbers. What
+they do not get is a pass, because nothing was held against anything. Reading
+`unjudged` as approval would be reading silence as consent, so the reader
+enforces that such a record carries the metrics it measured, contains no failed
+check, declares no insufficiency, and **says in its notes what to declare to
+get a verdict**. Without that last part the record reads as a dead end rather
+than as a missing declaration the operator can supply.
 
 A `quality` block is evidence that a stated comparison ran and what it
 returned. It is never evidence that retrieval is good.
