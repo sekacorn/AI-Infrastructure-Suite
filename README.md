@@ -325,6 +325,7 @@ The diagnostics are built to be safe to run and safe to paste into an issue:
 - [docs/compatibility.md](docs/compatibility.md) — the five layers and their limits
 - [docs/architecture.md](docs/architecture.md) — how the suite is built and why
 - [docs/release-policy.md](docs/release-policy.md) — version ranges and release process
+- [docs/re-embed-record.md](docs/re-embed-record.md) — the re-embed record format and its quality block
 - [docs/security.md](docs/security.md) — threat model and output guarantees
 
 ---
