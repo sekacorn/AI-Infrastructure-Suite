@@ -1,0 +1,66 @@
+{
+  "schema_version": "re-embed-record.v1",
+  "source_store": {
+    "store_id": "support-memory",
+    "store_evidence_sha256": "3be289efb718dc4c9329adf8d71c79932e60454e94551e20fdf63cb437875ca0"
+  },
+  "target_store": {
+    "store_id": "support-memory-rebuilt",
+    "store_evidence_sha256": "9f1d2c4b6a8e0f3517293a4b5c6d7e8f90112233445566778899aabbccddeeff"
+  },
+  "target_model": {
+    "id": "privateaistack.hashed-bow.sha256-signed",
+    "revision": "1",
+    "dimensions": 64,
+    "availability": "open_weight_self_hostable",
+    "availability_verification": "attested",
+    "license": "Apache-2.0"
+  },
+  "batch_log": {
+    "batch_size": 64,
+    "batches_completed": 1,
+    "records_embedded": 3,
+    "resumed": false
+  },
+  "coverage": {
+    "total_records": 4,
+    "retained_rebuilt": 3,
+    "missing_skipped": 0,
+    "deleted_by_policy_skipped": 1,
+    "failed": 0
+  },
+  "egress": {
+    "remote_provider_used": false,
+    "records_transmitted": 0,
+    "raw_source_text_transmitted": false
+  },
+  "quality": {
+    "status": "sampled",
+    "query_set_size": 12,
+    "top_k": 5,
+    "sufficient_evidence": true,
+    "metrics": {
+      "top_k_overlap": 0.8,
+      "rank_correlation": 0.74,
+      "hit_rate": 0.92,
+      "hit_rate_before": 0.92,
+      "mrr": 0.81,
+      "mrr_before": 0.85
+    },
+    "checks": [
+      {
+        "name": "minimum_top_k_overlap",
+        "passed": true,
+        "actual": 0.8,
+        "threshold": 0.7
+      },
+      {
+        "name": "maximum_mrr_drop",
+        "passed": true,
+        "actual": 0.04,
+        "threshold": 0.1,
+        "detail": "mrr fell from 0.85 to 0.81"
+      }
+    ]
+  }
+}

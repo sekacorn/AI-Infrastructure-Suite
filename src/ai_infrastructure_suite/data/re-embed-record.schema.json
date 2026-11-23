@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/ai-infrastructure-suite/schemas/re-embed-record.schema.json",
+  "title": "re-embed-record.v1",
+  "description": "A record of rebuilding one embedding store with a different model. It links the source and target embedding-portability.v1 documents by digest, declares the target model identity, and accounts for what was rebuilt, what it cost in batches, what left the machine, and what a quality comparison found. A quality block is evidence that a stated comparison ran and what it returned, never evidence that retrieval is good.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_store",
+    "target_store",
+    "target_model",
+    "batch_log",
+    "coverage",
+    "egress"
+  ],
+  "properties": {
+    "schema_version": { "const": "re-embed-record.v1" },
+    "source_store": {
+      "description": "The embedding-portability.v1 store that supplied the retained source text.",
+      "$ref": "#/$defs/store_reference"
+    },
+    "target_store": {
+      "description": "The embedding-portability.v1 store this run produced.",
+      "$ref": "#/$defs/store_reference"
+    },
+    "target_model": { "$ref": "#/$defs/model_identity" },
+    "batch_log": { "$ref": "#/$defs/batch_log" },
+    "coverage": { "$ref": "#/$defs/coverage" },
+    "egress": { "$ref": "#/$defs/egress" },
+    "quality": {
+      "description": "Absent when no comparison was attempted. Present with a status saying what the comparison found.",
+      "$ref": "#/$defs/quality"
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "store_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["store_id", "store_evidence_sha256"],
+      "properties": {
+        "store_id": { "$ref": "#/$defs/identifier" },
+        "store_evidence_sha256": {
+          "description": "SHA-256 of the embedding-portability.v1 document bytes. The identifier selects the claim; this digest binds it to content.",
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "model_identity": {
+      "description": "Model identity is the triple id + revision + dimensions. The same scheme at two dimensions is two models. Availability, any weights digest and any license are operator declarations the scanner cannot re-run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision", "dimensions", "availability", "availability_verification"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "revision": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "dimensions": { "type": "integer", "minimum": 1, "maximum": 8192 },
+        "availability": { "enum": ["open_weight_self_hostable", "vendor_only"] },
+        "availability_verification": { "const": "attested" },
+        "weights_sha256": { "$ref": "#/$defs/sha256" },
+        "license": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "batch_log": {
+      "description": "Accounting for a resumable run. The batch size is bounded so a run stays within memory regardless of store size.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["batch_size", "batches_completed", "records_embedded", "resumed"],
+      "properties": {
+        "batch_size": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "batches_completed": { "type": "integer", "minimum": 0 },
+        "records_embedded": { "type": "integer", "minimum": 0 },
+        "resumed": {
+          "description": "True when this run continued an interrupted one from a checkpoint.",
+          "type": "boolean"
+        },
+        "checkpoint_sha256": {
+          "description": "Digest of the final checkpoint file, when one was retained.",
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "coverage": {
+      "description": "Only retained records are rebuilt. The four counts plus the failure count must equal total_records.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_records",
+        "retained_rebuilt",
+        "missing_skipped",
+        "deleted_by_policy_skipped",
+        "failed"
+      ],
+      "properties": {
+        "total_records": { "type": "integer", "minimum": 0 },
+        "retained_rebuilt": { "type": "integer", "minimum": 0 },
+        "missing_skipped": { "type": "integer", "minimum": 0 },
+        "deleted_by_policy_skipped": {
+          "description": "Excluded by policy before any batch was formed, and never sent to a model.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": { "type": "integer", "minimum": 0 },
+        "failures": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["record_id", "reason"],
+            "properties": {
+              "record_id": { "$ref": "#/$defs/identifier" },
+              "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+            }
+          }
+        },
+        "failures_truncated": { "type": "boolean" }
+      }
+    },
+    "egress": {
+      "description": "What left the machine. Local and offline is the default; a remote provider requires an explicit opt-in and is reported here.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remote_provider_used", "records_transmitted", "raw_source_text_transmitted"],
+      "properties": {
+        "remote_provider_used": { "type": "boolean" },
+        "provider": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "records_transmitted": { "type": "integer", "minimum": 0 },
+        "raw_source_text_transmitted": { "type": "boolean" }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query_set_size", "top_k"],
+      "properties": {
+        "status": {
+          "description": "sampled: thresholds met. below_threshold: the comparison ran and at least one threshold was not met. not_measured: no query set, or too small for sufficient evidence.",
+          "enum": ["sampled", "below_threshold", "not_measured"]
+        },
+        "query_set_size": { "type": "integer", "minimum": 0 },
+        "top_k": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "sufficient_evidence": { "type": "boolean" },
+        "metrics": { "$ref": "#/$defs/metrics" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "passed", "actual", "threshold"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "passed": { "type": "boolean" },
+              "actual": { "type": "number" },
+              "threshold": { "type": "number" },
+              "detail": { "type": "string", "maxLength": 512 }
+            }
+          }
+        },
+        "notes": { "type": "string", "maxLength": 512 }
+      }
+    },
+    "metrics": {
+      "description": "Agreement metrics need no expected answers. Hit rate and MRR speak to correctness and are present only when the query set supplied expected records.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "top_k_overlap": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rank_correlation": { "type": "number", "minimum": -1, "maximum": 1 },
+        "hit_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "hit_rate_before": { "type": "number", "minimum": 0, "maximum": 1 },
+        "mrr": { "type": "number", "minimum": 0, "maximum": 1 },
+        "mrr_before": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
