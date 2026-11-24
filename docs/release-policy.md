@@ -2,7 +2,7 @@
 
 ## Versioning
 
-The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b2` (Beta release).
+The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b3` (Beta release).
 
 While the suite is `0.x`, the manifest schema, JSON report schemas, and Python API may change between minor versions. Both schemas carry their own `schema_version` so consumers can detect a change rather than discover it.
 
@@ -14,15 +14,17 @@ Every component is pinned to a **compatible range**, never an exact version:
 |---|---|---|---|
 | `agentforge-oss` | `>=0.5.5,<0.6.0` | 0.5.5 | 0.5.5 |
 | `agentpolicypack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
-| `aiauditlog` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
-| `openontologylite` | `>=0.2.0b2,<0.3.0` | 0.2.0b2 | 0.2.0b2 |
+| `aiauditlog` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b2 |
+| `openontologylite` | `>=0.2.0b3,<0.3.0` | 0.2.0b3 | 0.2.0b3 |
 | `aimeter-oss` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
-| `modelswapbench` | `>=0.1.0b1,<0.2.0` | 0.1.0b1 | 0.1.0b1 |
+| `modelswapbench` | `>=0.1.0b3,<0.2.0` | 0.1.0b3 | 0.1.0b3 |
 | `privateaistack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
 
 Verified against PyPI on the date in the manifest's `version_sources_verified_on`.
 
-ModelSwapBench shows the two columns doing their job. The range was calibrated against `0.1.0a6`; `0.1.0a7` was published shortly afterwards, resolves automatically under the existing upper bound, and needed **no suite release**. The minimum stays at `0.1.0a6` because that version is still supported and verified — raising it would exclude a working release for no reason.
+AIAuditLog shows the two columns doing their job: the range was set at `0.2.0b1`, `0.2.0b2` was published afterwards, resolves automatically under the existing upper bound, and needed **no suite release**. The minimum stays at `0.2.0b1` because that version is still supported.
+
+A minimum is raised only when an older release should no longer be installed. `agentforge-oss` moved to `0.5.5` because earlier versions could leak a credential through provider errors, and `modelswapbench` moved to `0.1.0b3` because earlier versions reported an unknown cost as zero for some hosted endpoints.
 
 ### Three rules
 
@@ -49,7 +51,7 @@ The manifest carries both, per component:
 - `minimum_version` — the range's lower bound
 - `latest_published_version` — what was on PyPI when the range was set
 
-When they are equal, the range was calibrated against the newest release. When they diverge — as they now do for ModelSwapBench — the component has published something newer that the range still admits, so no suite change is needed.
+When they are equal, the range was calibrated against the newest release. When they diverge — as they now do for AIAuditLog — the component has published something newer that the range still admits, so no suite change is needed.
 
 ```bash
 ai-suite manifest | python -c "
@@ -94,6 +96,7 @@ Publishing runs through `.github/workflows/release.yml` using **PyPI Trusted Pub
 The workflow is built so a release is always deliberate:
 
 - **Manual trigger only** (`workflow_dispatch` with a tag input). A tag push cannot start a publish.
+- **A dispatch rehearses by default.** The `dry_run` input defaults to `true`: every check and the build run, and the upload and everything after it are skipped. Only `-f dry_run=false` publishes.
 - **Tag/version agreement is enforced.** The build job refuses to continue unless the tag resolves to the version in `_version.py`, so the tag and the artifact can never disagree.
 - **The publish job is gated on the `pypi` GitHub environment**, which should carry required reviewers so a human approves the upload.
 - **`id-token: write` is granted only to the publish job**; the rest of the workflow runs read-only.
@@ -117,15 +120,16 @@ Without it the publish step fails with `invalid-publisher`. This step cannot be 
 ### Running a release
 
 ```bash
-git tag v0.1.0b2 <verified-commit>
-git push origin v0.1.0b2
-gh workflow run release.yml -f tag=v0.1.0b2
+git tag -a v0.1.0b3 <verified-commit> -m "AI Infrastructure Suite 0.1.0b3"
+git push origin refs/tags/v0.1.0b3:refs/tags/v0.1.0b3
+gh workflow run release.yml -f tag=v0.1.0b3                 # rehearsal
+gh workflow run release.yml -f tag=v0.1.0b3 -f dry_run=false  # real release
 ```
 
-Then approve the `pypi` environment deployment when prompted.
+Push the tag by explicit refspec, never with `--tags`. Then approve the `pypi` environment deployment when prompted. A published version can never be re-uploaded, so rehearse first.
 
 ## Support
 
 - **Python:** 3.11–3.13. The upper bound is the intersection across the ecosystem: four components declare `<3.14`. It will lift when they do.
 - **Platforms:** Linux, macOS, and Windows. The suite is pure Python; the only compiled wheels in the default resolution are `pydantic-core` and `cryptography`.
-- **Maturity caveat:** the seven components and this suite (`0.1.0b2` Beta release) have reached Beta. APIs and schemas may still change before 1.0.
+- **Maturity caveat:** the seven components and this suite (`0.1.0b3` Beta release) have reached Beta. APIs and schemas may still change before 1.0.

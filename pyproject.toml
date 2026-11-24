@@ -73,7 +73,7 @@ governance = [
     "openontologylite>=0.2.0b3,<0.3.0",
 ]
 benchmarking = [
-    "modelswapbench>=0.1.0b1,<0.2.0",
+    "modelswapbench>=0.1.0b3,<0.2.0",
 ]
 local = [
     "privateaistack>=0.2.0b1,<0.3.0",
@@ -88,7 +88,7 @@ full = [
     "aiauditlog>=0.2.0b1,<0.3.0",
     "openontologylite>=0.2.0b3,<0.3.0",
     "aimeter-oss>=0.2.0b1,<0.3.0",
-    "modelswapbench>=0.1.0b1,<0.2.0",
+    "modelswapbench>=0.1.0b3,<0.2.0",
     "privateaistack>=0.2.0b1,<0.3.0",
 ]
 dev = [
