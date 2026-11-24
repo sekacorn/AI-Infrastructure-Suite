@@ -8,7 +8,76 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.1.0b3] - 2026-11-24
+
+Re-embedded stores in exit reports. A store whose embeddings were rebuilt
+with a different model can now carry a `re-embed-record.v1` document, and the
+scanner checks part of that rebuild itself before it lets the record move a
+score. Nothing in 0.1.0b2 read such a record, so no published behaviour
+changes except the dependency floors under Changed.
+
+### The diagnostics-only invariant, amended
+
+0.1.0b2 said the scanner "never embeds text". That sentence no longer holds
+and is superseded by this one:
+
+**The suite never runs a model or embeds text with one.** It loads no weights,
+opens no socket and imports no provider SDK. It *may* recompute the two
+built-in hash-based embedding schemes, with the standard library only and over
+a bounded sample, to verify a rebuild that claims to use one. That is the only
+embedding computation it performs, and it is how a rebuild earns a verified
+level instead of an attested one. Reproducing a rebuild with any other model
+stays the job of the tool that produced it.
+
+### Added
+- **`re-embed-record.v1`**, a new evidence format with a packaged JSON Schema,
+  read by `ai_infrastructure_suite.re_embed_record`. A record describes one
+  store rebuilt with a different model: source and target stores by digest,
+  coverage, an egress block saying which code ran and what it was handed, and
+  an optional quality comparison.
+- **`exit-report` reads re-embed records** declared as `re_embed_records` on
+  the `embeddings` vector. A record must bind to that vector's evidence by
+  both digest and `store_id`, or it is **refused**, not skipped, so a record
+  produced from a different store cannot be attached and quietly ignored. The
+  Markdown report gains a `## Re-embedding` section.
+- **The scanner reproduces a bounded sample of the rebuild.** For a target
+  model that is one of the two built-in hash-based schemes, it recomputes a
+  sample of the target store's vectors from that store's own retained source
+  text, with its own implementation. A verified level means *that sample
+  matched*. **It is not a whole-store digest**, and the report prints the
+  sample size, worded "a sample of N", so it cannot be read as one. Any other
+  model, a mismatch, or a target document whose digest does not match leaves
+  the record `attested`.
+- **Four verified levels:** `verified (re-embedded, quality sampled)`,
+  `verified (re-embedded, quality below threshold)`,
+  `verified (re-embedded, quality unjudged)` and
+  `verified (re-embedded, quality not measured)`. `attested` covers every
+  rebuild the scanner did not reproduce, including every real-model run.
+- **Quality statuses** `sampled`, `below_threshold`, `unjudged` and
+  `not_measured`. `unjudged` means the comparison ran and produced metrics but
+  no agreement floor was declared, so there is no verdict; it is never read as
+  a pass. Declared thresholds are attested and are always shown.
+- **Seeds are derived, never accepted.** The anchor seed is `sha256` over the
+  source and target store digests, and the reproduction sample seed is
+  `sha256` over the target store digest. A record whose anchor seed is
+  anything else is read as `anchor_selection: operator`: reported in full,
+  moving no score. A seed written into a record cannot influence which vectors
+  the scanner checks.
+- **Egress fields.** The record's egress block states the executor kind,
+  whether content was transmitted and on what basis, and whether hosted
+  execution was confirmed. Delivery is always recorded as `unverified`:
+  submission is not delivery. The reader refuses a record that reports
+  transmitting content without confirmed hosted execution.
+- **The one score move.** A qualifying record moves a store **from exactly 50
+  to 25** and nothing else. It can never lower a score and can never produce
+  0, which still requires a verified restore. Worst-store aggregation is
+  unchanged.
+
 ### Changed
+- **Raised the `modelswapbench` floor to `>=0.1.0b3,<0.2.0`** in the
+  `[benchmarking]` and `[full]` extras. In 0.1.0b1 and 0.1.0b2 a hosted
+  `openai_compatible` endpoint with no declared pricing was classified as
+  local and its cost reported as `0.0` instead of unknown.
 - **Raised the `agentforge-oss` floor to `>=0.5.5,<0.6.0`** for the core
   install and the `[observability]` and `[full]` extras. 0.5.5 is a security
   release: provider errors in 0.5.4 and earlier could repeat upstream text,
@@ -16,6 +85,16 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
   `base_url` containing credentials was logged. The floor keeps an install of
   this suite from resolving to an affected version. The upper bound is
   unchanged.
+
+### Compatibility
+- **An exit manifest that declares `re_embed_records` requires this release or
+  later to read.** 0.1.0b2's manifest schema forbids unknown fields on a vector
+  entry and rejects it as invalid input. Manifests without the field are
+  unaffected.
+- **Reading a re-embed record written by PrivateAIStack 0.2.0b2 or later
+  requires this release.** This is a compatibility statement, not a
+  dependency: PrivateAIStack does not depend on this suite, and this suite
+  does not import PrivateAIStack.
 
 ## [0.1.0b2] - 2026-11-21
 
