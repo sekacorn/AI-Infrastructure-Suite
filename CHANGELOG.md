@@ -8,6 +8,15 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+### Changed
+- **Raised the `agentforge-oss` floor to `>=0.5.5,<0.6.0`** for the core
+  install and the `[observability]` and `[full]` extras. 0.5.5 is a security
+  release: provider errors in 0.5.4 and earlier could repeat upstream text,
+  including an API key reflected by a proxy or third-party endpoint, and a
+  `base_url` containing credentials was logged. The floor keeps an install of
+  this suite from resolving to an affected version. The upper bound is
+  unchanged.
+
 ## [0.1.0b2] - 2026-11-21
 
 - Added an offline `ai-suite exit-report` command with a versioned project manifest, eleven evidence vectors, verification levels, installed component versions, Markdown and JSON output.

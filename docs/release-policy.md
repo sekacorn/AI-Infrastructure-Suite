@@ -12,7 +12,7 @@ Every component is pinned to a **compatible range**, never an exact version:
 
 | Component | Range | Minimum supported | Latest published |
 |---|---|---|---|
-| `agentforge-oss` | `>=0.5.4,<0.6.0` | 0.5.4 | 0.5.4 |
+| `agentforge-oss` | `>=0.5.5,<0.6.0` | 0.5.5 | 0.5.5 |
 | `agentpolicypack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
 | `aiauditlog` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
 | `openontologylite` | `>=0.2.0b2,<0.3.0` | 0.2.0b2 | 0.2.0b2 |

@@ -140,7 +140,7 @@ ai-suite manifest         # emit the ecosystem manifest as JSON
 ┌──────────────────┬──────────────────┬────────────────────┬────────────────┬──────────────┬─────────────────┬───────────┬──────────┐
 │ Component        │ Distribution     │ Import             │ CLI            │ Layer        │ Supported range │ Installed │ Status   │
 ├──────────────────┼──────────────────┼────────────────────┼────────────────┼──────────────┼─────────────────┼───────────┼──────────┤
-│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.4,<0.6.0  │ 0.5.4     │ ok       │
+│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.5,<0.6.0  │ 0.5.5     │ ok       │
 │ AgentPolicyPack  │ agentpolicypack  │ agent_policy_pack  │ agentpolicy    │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ AIMeter          │ aimeter-oss      │ ai_meter           │ aimeter        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
@@ -267,7 +267,7 @@ Worth knowing about the ecosystem itself, since the suite does not paper over it
 Every component is pinned to a **compatible range**, never an exact version:
 
 ```
-agentforge-oss    >=0.5.4,<0.6.0
+agentforge-oss    >=0.5.5,<0.6.0
 agentpolicypack   >=0.2.0b1,<0.3.0
 aiauditlog        >=0.2.0b1,<0.3.0
 openontologylite  >=0.2.0b2,<0.3.0
