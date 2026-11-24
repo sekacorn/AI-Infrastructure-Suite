@@ -17,6 +17,9 @@ from ai_infrastructure_suite._evidence import (
 from ai_infrastructure_suite._version import __version__
 from ai_infrastructure_suite.doctor import inspect_installation
 
+MAX_RE_EMBED_RECORDS = 64
+"""Matches embedding-portability.v1's store cap: one record per store, rebuilt more than once."""
+
 VECTORS = (
     "policies",
     "prompts",
@@ -66,7 +69,11 @@ RUBRIC = {
 
 
 def _reference(root: Path, entry: object) -> dict[str, Any]:
-    if not isinstance(entry, dict) or entry.keys() != {"state", "path", "sha256"}:
+    # re_embed_records is optional and handled separately, so it is allowed
+    # here but never required.
+    if not isinstance(entry, dict) or not {"state", "path", "sha256"} <= entry.keys():
+        raise ValueError("Each entry requires state, path and sha256.")
+    if entry.keys() - {"state", "path", "sha256", "re_embed_records"}:
         raise ValueError("Each entry requires state, path and sha256.")
     state, digest = entry["state"], entry["sha256"]
     if not isinstance(state, str) or state not in RUBRIC:
@@ -218,9 +225,113 @@ def _store_rows(result: Any) -> list[dict[str, Any]]:
     return rows
 
 
+def _re_embed_declarations(entry: object) -> list[dict[str, str]]:
+    """Read the optional re_embed_records list, refusing a malformed one."""
+    if not isinstance(entry, dict):
+        return []
+    declared = entry.get("re_embed_records")
+    if declared is None:
+        return []
+    if not isinstance(declared, list) or len(declared) > MAX_RE_EMBED_RECORDS:
+        raise ValueError("Invalid re_embed_records list.")
+    references: list[dict[str, str]] = []
+    for item in declared:
+        if not isinstance(item, dict) or item.keys() != {"path", "sha256"}:
+            raise ValueError("Each re_embed_records entry requires path and sha256.")
+        digest = item["sha256"]
+        if not isinstance(digest, str) or not re.fullmatch("[0-9a-f]{64}", digest):
+            raise ValueError("Invalid re-embed record SHA-256 digest.")
+        references.append({"path": portable_relative_path(item["path"]), "sha256": digest})
+    return references
+
+
+def _re_embed_rows(
+    root: Path, entry: object, result: Any, evidence_sha256: str
+) -> tuple[list[dict[str, Any]], frozenset[str]]:
+    """Assess every declared re-embed record and say which stores improve."""
+    from ai_infrastructure_suite.re_embed_scan import ReEmbedScanError, scan_re_embed_record
+
+    declarations = _re_embed_declarations(entry)
+    if not declarations:
+        return [], frozenset()
+    store_ids = frozenset(store.store_id for store in result.stores)
+    rows: list[dict[str, Any]] = []
+    improved: set[str] = set()
+    for reference in declarations:
+        try:
+            assessment = scan_re_embed_record(
+                root / reference["path"],
+                declared_sha256=reference["sha256"],
+                source_store_sha256=evidence_sha256,
+                source_store_ids=store_ids,
+            )
+        except ReEmbedScanError as exc:
+            # Refused, not skipped: a record that does not bind to this
+            # evidence would otherwise go unmentioned.
+            raise ValueError(f"Invalid re-embed record {reference['path']}: {exc}") from None
+        rows.append(_re_embed_row(assessment, reference))
+        if assessment.improves_score:
+            improved.add(assessment.record.source_store.store_id)
+    return rows, frozenset(improved)
+
+
+def _re_embed_row(assessment: Any, reference: dict[str, str]) -> dict[str, Any]:
+    """Render one re-embed record for the report."""
+    record = assessment.record
+    quality = record.quality
+    egress = record.egress
+    row: dict[str, Any] = {
+        **reference,
+        "source_store_id": record.source_store.store_id,
+        "target_store_id": record.target_store.store_id,
+        "target_model": f"{record.target_model.id}@{record.target_model.revision}",
+        "target_dimensions": record.target_model.dimensions,
+        "availability": record.target_model.availability,
+        "availability_verification": "attested",
+        "verification_level": assessment.label,
+        "rebuild_reproduced": assessment.reproduced,
+        "reproduction_sample_size": assessment.reproduction.sample_size,
+        "anchor_selection": assessment.anchor_selection,
+        "anchor_seed_was_declared_not_derived": assessment.seed_was_ground,
+        "score_effect": "50_to_25" if assessment.improves_score else "none",
+        "quality_status": record.quality_status,
+        "coverage_complete": record.coverage.complete,
+        "attested_claims": list(record.attested_claims()),
+        "reason": assessment.reason,
+        "egress": {
+            "executor_kind": egress.executor_kind or "not stated",
+            "execution_verification": egress.execution_verification or "not stated",
+            "hosting_mode": egress.hosting_mode or "not stated",
+            "external_execution_confirmed": egress.external_execution_confirmed,
+            "hosted_execution_confirmed": egress.hosted_execution_confirmed,
+            "records_submitted_to_external_executor": egress.submission_count,
+            "transmission_basis": egress.transmission_basis or "not stated",
+            "delivery_verification": egress.delivery_verification or "not stated",
+            "delivery_established": egress.delivery_established,
+            "executor_id": egress.executor_id,
+            "endpoint_origin": egress.endpoint_origin,
+            "dataset_privacy_classification": egress.dataset_privacy_classification,
+            "warnings": list(egress.warnings),
+        },
+    }
+    if quality is not None:
+        row["metric_basis"] = quality.metric_basis or "not stated"
+        row["mode"] = quality.mode or "not stated"
+        row["measures_user_search_quality"] = quality.measures_user_search_quality
+        row["thresholds"] = dict(quality.thresholds or {})
+        row["threshold_summary"] = quality.threshold_summary()
+        row["metrics"] = dict(quality.metrics)
+        row["query_set_size"] = quality.query_set_size
+        row["top_k"] = quality.top_k
+    return row
+
+
 def _embedding_reference(root: Path, entry: object, restore: Any) -> dict[str, Any]:
     """Scan an embedding portability inventory and build its vector row."""
-    from ai_infrastructure_suite.embedding_portability import scan_embedding_portability
+    from ai_infrastructure_suite.embedding_portability import (
+        apply_re_embedding,
+        scan_embedding_portability,
+    )
 
     reference = _reference(root, entry)
     result = scan_embedding_portability(
@@ -228,6 +339,8 @@ def _embedding_reference(root: Path, entry: object, restore: Any) -> dict[str, A
         evidence_sha256=reference["sha256"],
         restore=restore,
     )
+    re_embed_rows, improved = _re_embed_rows(root, entry, result, reference["sha256"])
+    result = apply_re_embedding(result, improved)
     # The scanner re-ran every digest, dimension, and coverage check itself.
     # The model's availability, weight digest, license, and any policy
     # deletion remain operator declarations, so the row says both.
@@ -240,16 +353,49 @@ def _embedding_reference(root: Path, entry: object, restore: Any) -> dict[str, A
         attested.append("policy deletions")
     linked = any(store.restore_link == "verified" for store in result.stores)
     level = "verified (local evidence + fake profiles)" if linked else "verified (local evidence)"
-    return {
+    reason = f"{result.reason} Attested, not re-run: {', '.join(attested)}."
+    # External execution and hosted data reach the summary row's reason, not
+    # only the detail section, so a reader skimming the table still sees them.
+    alerts = _egress_alerts(re_embed_rows)
+    if alerts:
+        reason = f"{reason} {' '.join(alerts)}"
+    row: dict[str, Any] = {
         **reference,
         "state": "embedding_inventory",
         "score": result.score,
         "verification_level": level,
         "re_embeddable": result.re_embeddable,
         "attested_claims": attested,
-        "reason": f"{result.reason} Attested, not re-run: {', '.join(attested)}.",
+        "reason": reason,
         "stores": _store_rows(result),
     }
+    if re_embed_rows:
+        row["re_embed_records"] = re_embed_rows
+    return row
+
+
+def _egress_alerts(rows: list[dict[str, Any]]) -> list[str]:
+    """One sentence per record whose rebuild ran external code or sent text out.
+
+    Deliberately in the summary reason as well as the detail: the alarming case
+    should be impossible to miss, and a reader who only reads the table is the
+    reader most likely to miss it.
+    """
+    alerts: list[str] = []
+    for row in rows:
+        egress = row["egress"]
+        if egress["executor_kind"] == "external_unverified":
+            alerts.append(
+                f"Operator-supplied code ran the rebuild of {row['target_store_id']}; "
+                "its network behaviour is attested, not verified."
+            )
+        if egress["hosting_mode"] == "hosted" and egress["records_submitted_to_external_executor"]:
+            alerts.append(
+                f"Source text left the machine for {row['target_store_id']}: "
+                f"{egress['records_submitted_to_external_executor']} record(s) handed to an "
+                "external executor, delivery unverified."
+            )
+    return alerts
 
 
 def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[str, Any]:
@@ -344,6 +490,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
     # Per-store detail lives in its own top-level section so the vector table
     # keeps one row per vector.
     embedding_stores = rows["embeddings"].pop("stores", None)
+    re_embed_records = rows["embeddings"].pop("re_embed_records", None)
     installation = inspect_installation(check_imports=False)
     failed_profile_names = sorted(
         {
@@ -378,7 +525,23 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         report["restore_profiles"] = list(restore_profiles.values())
     if embedding_stores is not None:
         report["embedding_stores"] = embedding_stores
+    if re_embed_records:
+        report["re_embed_records"] = re_embed_records
     return report
+
+
+def _tick(value: object) -> str:
+    """Render a tri-state consent flag without inventing a default.
+
+    An absent flag is not a denial and not a grant: a record written before
+    the field existed says nothing, and printing a tick or a cross for it would
+    put a claim in the report nobody made.
+    """
+    if value is True:
+        return "yes"
+    if value is False:
+        return "no"
+    return "not stated"
 
 
 def render_markdown(report: dict[str, Any]) -> str:
@@ -439,6 +602,113 @@ def render_markdown(report: dict[str, Any]) -> str:
             lines.extend(["", f"### {store['store_id']}", ""])
             lines.extend(f"- {text}" for text in details)
             lines.append(f"- reason: {store['reason']}")
+    if "re_embed_records" in report:
+        lines.extend(
+            [
+                "",
+                "## Re-embedding",
+                "",
+                "Each record below says one store was rebuilt with a different model. A",
+                "verified level means this scanner recomputed a **sample** of the rebuilt",
+                "store's vectors and they matched; a sample is not a whole-store digest.",
+                "Thresholds are the operator's own, so they are printed beside every",
+                "verdict rather than left out of it.",
+            ]
+        )
+        for row in report["re_embed_records"]:
+            egress = row["egress"]
+            lines.extend(
+                [
+                    "",
+                    f"### {row['source_store_id']} to {row['target_store_id']}",
+                    "",
+                ]
+            )
+            # The loud block first, before anything a reader might stop at.
+            if egress["executor_kind"] == "external_unverified":
+                lines.extend(
+                    [
+                        f"> **Operator-supplied code ran this rebuild.** Executor "
+                        f"`{egress['executor_id'] or 'unnamed'}`"
+                        + (
+                            f", declared endpoint `{egress['endpoint_origin']}`"
+                            if egress["endpoint_origin"]
+                            else ""
+                        )
+                        + ". Network behaviour is attested and was not verified; this",
+                        "> package cannot sandbox injected code.",
+                    ]
+                )
+            if (
+                egress["hosting_mode"] == "hosted"
+                and egress["records_submitted_to_external_executor"]
+            ):
+                lines.extend(
+                    [
+                        ">",
+                        f"> **Source text left the machine.** "
+                        f"{egress['records_submitted_to_external_executor']} record(s) handed to "
+                        f"that executor (`{egress['transmission_basis']}`; attempts may exceed",
+                        f"> this). Delivery to any provider is "
+                        f"`{egress['delivery_verification']}`. "
+                        f"Consent: external {_tick(egress['external_execution_confirmed'])}, "
+                        f"hosted {_tick(egress['hosted_execution_confirmed'])}. Classification "
+                        f"`{egress['dataset_privacy_classification'] or 'not stated'}` (attested).",
+                    ]
+                )
+            if egress["executor_kind"] == "local_builtin":
+                lines.append("Registry-owned embedder; nothing was handed to external code.")
+            elif egress["executor_kind"] == "not stated":
+                lines.append(
+                    "The record does not state which executor ran, so nothing is assumed about it."
+                )
+            effect = "moved 50 to 25" if row["score_effect"] == "50_to_25" else "moves no score"
+            lines.extend(
+                [
+                    "",
+                    f"- **{row['verification_level']}** — {effect}",
+                    f"- target model: `{row['target_model']}` at {row['target_dimensions']} "
+                    f"dimensions, {row['availability']} (attested)",
+                    "- reproduction: "
+                    + ("sample matched" if row["rebuild_reproduced"] else "not reproduced")
+                    + (
+                        f", {row['reproduction_sample_size']} vector(s) recomputed"
+                        if row["reproduction_sample_size"]
+                        else ""
+                    ),
+                ]
+            )
+            if row.get("threshold_summary"):
+                lines.append(f"- {row['threshold_summary']}")
+                lines.append(
+                    "- thresholds are the operator's; passing means the bar they set was cleared"
+                )
+            if "metric_basis" in row:
+                suffix = (
+                    " — not a measure of search quality"
+                    if not row.get("measures_user_search_quality", False)
+                    else ""
+                )
+                lines.append(f"- measurement: {row['metric_basis']} ({row['mode']}){suffix}")
+            selection = row["anchor_selection"]
+            note = (
+                "redrawable by a third party"
+                if selection == "seeded_random"
+                else "reported in full, moves no score"
+            )
+            lines.append(f"- query set: {selection} — {note}")
+            if row["anchor_seed_was_declared_not_derived"]:
+                lines.append(
+                    "- the declared anchor seed is not the derived one, so the query set is "
+                    "read as operator-chosen"
+                )
+            lines.append(f"- reason: {row['reason']}")
+            if row["attested_claims"]:
+                lines.append("- attested, not re-run:")
+                lines.extend(f"  - {claim}" for claim in row["attested_claims"])
+            if egress["warnings"]:
+                lines.append("- egress warnings the operator saw:")
+                lines.extend(f"  - {text}" for text in egress["warnings"])
     if "restore_profiles" in report:
         lines.extend(
             [

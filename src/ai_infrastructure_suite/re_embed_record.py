@@ -5,9 +5,11 @@ model. It links the source and target ``embedding-portability.v1`` documents by
 digest, declares the target model identity, and accounts for what was rebuilt,
 what left the machine, and what a quality comparison found.
 
-This module only reads. It never embeds text, loads weights, opens a socket, or
-imports a provider SDK: the suite stays diagnostics-only. Reproducing a rebuild
-belongs to the tool that produced it.
+This module only reads. It never runs a model or embeds text with one, loads
+weights, opens a socket, or imports a provider SDK. Recomputing the two
+built-in hash-based schemes to check a rebuild lives in
+:mod:`ai_infrastructure_suite.reproduction`; reproducing a rebuild against any
+other model belongs to the tool that produced it.
 
 A ``quality`` block is evidence that a stated comparison ran and what it
 returned. It is never evidence that retrieval is good. The query set is the

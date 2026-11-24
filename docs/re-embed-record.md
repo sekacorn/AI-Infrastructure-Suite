@@ -1,9 +1,12 @@
 # Reading a `re-embed-record.v1`
 
 A re-embed record says one embedding store was rebuilt with a different model.
-The suite only reads it. It never embeds text, loads weights, opens a socket or
-imports a provider SDK, so reproducing a rebuild is always the job of the tool
-that produced it — today, PrivateAIStack's `privateaistack reembed` command.
+The suite never runs a model or embeds text with one. It loads no weights,
+opens no socket and imports no provider SDK. It *may* recompute the two
+built-in hash-based schemes, using the standard library only and over a bounded
+sample, to verify a claim — that is how a rebuild earns a verified level rather
+than an attested one. Reproducing a rebuild against any other model stays the
+job of the tool that produced it.
 
 ```python
 from ai_infrastructure_suite.re_embed_record import load_re_embed_record
@@ -196,3 +199,67 @@ them as one line for that purpose.
 The reader refuses a `sampled` or `below_threshold` record whose declared
 thresholds do not name exactly the checks that were run, and refuses a
 `not_measured` record that carries thresholds at all.
+
+## How `exit-report` uses a record
+
+Declare records on the `embeddings` vector of an `exit-manifest.v1`:
+
+```json
+"embeddings": {
+  "state": "embedding_inventory",
+  "path": "evidence/embedding-portability.json",
+  "sha256": "...",
+  "re_embed_records": [{ "path": "evidence/rebuilt/re-embed-record.json", "sha256": "..." }]
+}
+```
+
+**Binding is refused, not ignored.** A record's `source_store` must match that
+entry by both digest and `store_id`. A record that does not bind is refused,
+because quietly skipping it would let an operator attach a record produced from
+a different, more flattering store and have the report simply not mention it.
+
+The target store is found beside the record, where the writing pipeline puts
+it, and believed only on digest: the sibling `embedding-portability.json` must
+hash to `target_store.store_evidence_sha256`. Convention locates the file; the
+digest decides whether to trust it.
+
+### Reproduction, and what a verified level means
+
+The scanner recomputes a **bounded sample** of the target store's vectors from
+that store's own retained source text, using its own implementation of the two
+built-in hash-based schemes. `verified (re-embedded, quality sampled)` means
+that sample matched and every declared threshold was met. **It is not a
+whole-store digest**, and the report prints the sample size so nobody can read
+it as one.
+
+An identity the scanner does not implement — including the same `id` and
+`revision` at a different `dimensions`, which is a different model — leaves the
+record `attested`. So does a mismatch, a missing target document, or one whose
+digest does not match.
+
+### Seeds are derived, never accepted
+
+An operator who chooses a seed can grind it: draw query set after query set
+until the numbers clear the bar, then publish the one that passed.
+
+- **Anchor seed** = `sha256` over the source and target store digests.
+- **Reproduction sample seed** = `sha256` over the target store digest.
+
+A record whose `anchor_seed` is anything else is read as
+`anchor_selection: operator` — reported in full, with its label, metrics and
+checks, and **moving no score**. The scanner's own sample is derived
+independently, so a seed written into a record cannot influence which vectors
+get checked.
+
+### The one score move
+
+A qualifying record moves a store **from exactly 50 to 25**, and nothing else.
+A store scores 50 precisely because its own model is `vendor_only`; a
+reproduced rebuild onto a self-hostable model is the demonstration that it can
+be left. The other rungs are unreachable: 75 and 100 fail the record's
+complete-coverage condition, and 0 already rests on a verified restore, which
+is stronger evidence than any rebuild. A record can never lower a score and
+can never produce 0.
+
+Worst-store aggregation is unchanged — the limiting per-store score still
+governs, so one improved store cannot hide a worse one.

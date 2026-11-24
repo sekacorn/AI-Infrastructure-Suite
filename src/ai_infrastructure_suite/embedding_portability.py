@@ -6,9 +6,13 @@ record, and is the declared embedding model portable enough to reproduce
 locally?
 
 Everything here is local and bounded. The scanner hashes files, parses vectors,
-counts coverage, and checks a restore link. It never imports a provider SDK,
-opens a socket, downloads weights, embeds text, or prints source text or vector
-values. Model availability, weight digests, policy deletions, and licenses are
+counts coverage, and checks a restore link. It never runs a model or embeds
+text with one, imports a provider SDK, opens a socket, downloads weights, or
+prints source text or vector values. Recomputing the two built-in hash-based
+schemes over a bounded sample, which :mod:`ai_infrastructure_suite.reproduction`
+does, is the one exception and is arithmetic over bytes already on disk.
+
+Model availability, weight digests, policy deletions, and licenses are
 operator declarations and stay labeled attested.
 """
 
@@ -18,7 +22,7 @@ import hashlib
 import math
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final
 
@@ -27,6 +31,7 @@ from ai_infrastructure_suite._evidence import (
     portable_relative_path,
     read_bounded_file,
 )
+from ai_infrastructure_suite.reproduction import is_reproducible, reproduce_store_sample
 
 SCHEMA_VERSION: Final = "embedding-portability.v1"
 
@@ -55,6 +60,11 @@ ATTESTED_DELETION_WARNING: Final = (
 )
 UNPINNED_WEIGHTS_NOTE: Final = (
     "Model weights are not pinned, so re-embedding may not reproduce identical vectors."
+)
+DETERMINISTIC_NOTE: Final = (
+    "This model is a deterministic scheme this scanner re-ran: a sample of {count} "
+    "vector(s) was recomputed and matched. Reproduction used source text and code, "
+    "not pinned weights."
 )
 
 _IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]*")
@@ -517,6 +527,45 @@ def _aggregate(stores: tuple[StoreResult, ...]) -> EmbeddingPortability:
     )
 
 
+def apply_re_embedding(
+    result: EmbeddingPortability,
+    improved_store_ids: frozenset[str],
+) -> EmbeddingPortability:
+    """Move the named stores from 50 to 25 and re-aggregate.
+
+    Fifty is the only rung a reproduced rebuild can move, and the reason is not
+    arbitrary. A store scores 50 precisely because *its own* model is
+    ``vendor_only``; a rebuild onto a self-hostable model that this scanner
+    reproduced is the demonstration that the store can be left, which is what
+    25 means. The other rungs are unreachable anyway: 75 and 100 fail the
+    record's complete-coverage condition, and 0 already rests on a verified
+    restore, which is strictly stronger evidence than any rebuild.
+
+    So a store at anything other than exactly 50 is returned untouched. A
+    record can never lower a score and can never produce 0.
+    """
+    if not improved_store_ids:
+        return result
+    updated: list[StoreResult] = []
+    for store in result.stores:
+        if store.store_id in improved_store_ids and store.score == 50:
+            updated.append(
+                replace(
+                    store,
+                    score=25,
+                    reason=(
+                        f"{store.reason} A re-embed record this scanner reproduced rebuilt this "
+                        "store with a self-hostable model, which moves it from 50 to 25."
+                    ),
+                )
+            )
+        else:
+            updated.append(store)
+    # Re-aggregated rather than patched: the limiting store governs, so one
+    # improved store must not be able to hide a worse one.
+    return _aggregate(tuple(updated))
+
+
 def scan_embedding_portability(
     evidence_path: Path,
     *,
@@ -559,15 +608,56 @@ def scan_embedding_portability(
             statuses, shard_count = _single_file_records(vectors["records"], root, model)
         else:
             statuses, shard_count = _shard_records(vectors, root, model)
-        results.append(
-            _evaluate_store(
-                store_id,
-                model,
-                layout,
-                shard_count,
-                statuses,
-                evidence_sha256,
-                link,
-            )
+        evaluated = _evaluate_store(
+            store_id,
+            model,
+            layout,
+            shard_count,
+            statuses,
+            evidence_sha256,
+            link,
         )
+        results.append(_soften_deterministic_reason(evaluated, store, root, evidence_sha256))
     return _aggregate(tuple(results))
+
+
+def _soften_deterministic_reason(
+    result: StoreResult, store: Mapping[str, Any], root: Path, evidence_sha256: str
+) -> StoreResult:
+    """Replace the unpinned-weights sentence, but only when it has been earned.
+
+    The generic note says re-embedding may not reproduce identical vectors.
+    For the two built-in hashing schemes the "weights" are source code, so the
+    sentence reads as doubt about reproducibility that does not apply. Softer
+    wording needs **both** halves of the recorded rule, because the first is a
+    claim about which code ran and the second is the only offline check that it
+    actually ran:
+
+    1. the exact identity triple is one this scanner implements, and
+    2. this scanner recomputed a sample of *this store's* vectors and they
+       matched.
+
+    A declared "deterministic" label, a recognised ``id`` alone, or a matching
+    ``revision`` at a different ``dimensions`` never qualifies. The wording
+    moves no score and creates no label.
+    """
+    if UNPINNED_WEIGHTS_NOTE not in result.reason:
+        return result
+    if not is_reproducible(result.model.id, result.model.revision, result.model.dimensions):
+        return result
+    reproduction = reproduce_store_sample(
+        dict(store),
+        root,
+        model_id=result.model.id,
+        revision=result.model.revision,
+        dimensions=result.model.dimensions,
+        seed_digest=evidence_sha256,
+    )
+    if not reproduction.reproduced:
+        return result
+    return replace(
+        result,
+        reason=result.reason.replace(
+            UNPINNED_WEIGHTS_NOTE, DETERMINISTIC_NOTE.format(count=reproduction.sample_size)
+        ),
+    )
