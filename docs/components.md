@@ -31,7 +31,7 @@ Note that distribution names and import names differ for most components — `pi
 
 ## AgentForge
 
-**`agentforge-oss`** · imports as `forge` · CLI `forge` · range `>=0.5.4,<0.6.0`
+**`agentforge-oss`** · imports as `forge` · CLI `forge` · range `>=0.5.5,<0.6.0`
 
 Async-first multi-agent orchestration. A supervisor decomposes a goal, spawns worker agents that run concurrently in bounded batches, and synthesises the results. Model routing picks between registered models by `cost_optimized`, `quality_first`, `balanced`, or `fixed` strategy. Budgets are enforced twice: a pessimistic pre-flight estimate before a worker batch starts, and a precise check after every model call.
 

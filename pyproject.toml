@@ -57,7 +57,7 @@ dependencies = [
     "packaging>=24.0",
     "rich>=13.7",
     "typer>=0.12",
-    "agentforge-oss>=0.5.4,<0.6.0",
+    "agentforge-oss>=0.5.5,<0.6.0",
     "agentpolicypack>=0.2.0b1,<0.3.0",
     "aiauditlog>=0.2.0b1,<0.3.0",
     "openontologylite>=0.2.0b3,<0.3.0",
@@ -80,10 +80,10 @@ local = [
 ]
 observability = [
     "aimeter-oss[otel]>=0.2.0b1,<0.3.0",
-    "agentforge-oss[otel]>=0.5.4,<0.6.0",
+    "agentforge-oss[otel]>=0.5.5,<0.6.0",
 ]
 full = [
-    "agentforge-oss>=0.5.4,<0.6.0",
+    "agentforge-oss>=0.5.5,<0.6.0",
     "agentpolicypack>=0.2.0b1,<0.3.0",
     "aiauditlog>=0.2.0b1,<0.3.0",
     "openontologylite>=0.2.0b3,<0.3.0",
