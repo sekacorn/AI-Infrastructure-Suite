@@ -87,6 +87,14 @@
       "items": {
         "$ref": "#/$defs/embedding_store"
       }
+    },
+    "re_embed_records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/re_embed_record"
+      }
     }
   },
   "required": [
@@ -565,6 +573,286 @@
             }
           }
         }
+      }
+    },
+    "re_embed_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "source_store_id",
+        "target_store_id",
+        "target_model",
+        "target_dimensions",
+        "availability",
+        "availability_verification",
+        "verification_level",
+        "rebuild_reproduced",
+        "reproduction_sample_size",
+        "anchor_selection",
+        "anchor_seed_was_declared_not_derived",
+        "score_effect",
+        "quality_status",
+        "coverage_complete",
+        "attested_claims",
+        "reason",
+        "egress"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "target_store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "target_model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "target_dimensions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "availability": {
+          "enum": [
+            "open_weight_self_hostable",
+            "vendor_only"
+          ]
+        },
+        "availability_verification": {
+          "const": "attested"
+        },
+        "verification_level": {
+          "enum": [
+            "attested",
+            "verified (re-embedded, quality sampled)",
+            "verified (re-embedded, quality below threshold)",
+            "verified (re-embedded, quality unjudged)",
+            "verified (re-embedded, quality not measured)"
+          ]
+        },
+        "rebuild_reproduced": {
+          "type": "boolean"
+        },
+        "reproduction_sample_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "anchor_selection": {
+          "enum": [
+            "operator",
+            "seeded_random"
+          ]
+        },
+        "anchor_seed_was_declared_not_derived": {
+          "type": "boolean"
+        },
+        "score_effect": {
+          "enum": [
+            "50_to_25",
+            "none"
+          ]
+        },
+        "quality_status": {
+          "enum": [
+            "sampled",
+            "below_threshold",
+            "unjudged",
+            "not_measured"
+          ]
+        },
+        "coverage_complete": {
+          "type": "boolean"
+        },
+        "attested_claims": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "maxItems": 64
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "executor_kind",
+            "execution_verification",
+            "hosting_mode",
+            "external_execution_confirmed",
+            "hosted_execution_confirmed",
+            "records_submitted_to_external_executor",
+            "transmission_basis",
+            "delivery_verification",
+            "delivery_established",
+            "executor_id",
+            "endpoint_origin",
+            "dataset_privacy_classification",
+            "warnings"
+          ],
+          "properties": {
+            "executor_kind": {
+              "enum": [
+                "local_builtin",
+                "external_unverified",
+                "not stated"
+              ]
+            },
+            "execution_verification": {
+              "enum": [
+                "registry_owned",
+                "attested",
+                "not stated"
+              ]
+            },
+            "hosting_mode": {
+              "enum": [
+                "local",
+                "hosted",
+                "not stated"
+              ]
+            },
+            "external_execution_confirmed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "hosted_execution_confirmed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "records_submitted_to_external_executor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transmission_basis": {
+              "enum": [
+                "handed_to_executor",
+                "no_transmission",
+                "not stated"
+              ]
+            },
+            "delivery_verification": {
+              "enum": [
+                "unverified",
+                "not stated"
+              ]
+            },
+            "delivery_established": {
+              "type": "boolean"
+            },
+            "executor_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 512
+            },
+            "endpoint_origin": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 512
+            },
+            "dataset_privacy_classification": {
+              "enum": [
+                "public",
+                "internal",
+                "confidential",
+                "restricted",
+                "unknown",
+                null
+              ]
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "maxItems": 64
+            }
+          }
+        },
+        "metric_basis": {
+          "enum": [
+            "neighborhood_agreement",
+            "retrieval_relevance",
+            "not stated"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "record_anchored",
+            "text",
+            "not stated"
+          ]
+        },
+        "measures_user_search_quality": {
+          "type": "boolean"
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "threshold_summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "query_set_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "dependentRequired": {
+        "metric_basis": [
+          "mode",
+          "measures_user_search_quality",
+          "thresholds",
+          "threshold_summary",
+          "metrics",
+          "query_set_size",
+          "top_k"
+        ]
       }
     }
   }

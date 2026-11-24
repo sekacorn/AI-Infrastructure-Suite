@@ -94,6 +94,7 @@ full = [
 dev = [
     "bandit[toml]>=1.7",
     "build>=1.2",
+    "jsonschema>=4.18",
     "mypy>=1.10",
     "pip-audit>=2.7",
     "pytest>=8.0",
