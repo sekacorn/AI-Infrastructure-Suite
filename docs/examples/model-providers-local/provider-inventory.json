@@ -1,0 +1,30 @@
+{
+  "schema_version": "provider-inventory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "providers": [
+    {
+      "provider_id": "local_ollama",
+      "kind": "ollama",
+      "preset": null,
+      "preset_source": null,
+      "endpoint_origin": "http://localhost:11434",
+      "jurisdiction": "not_applicable",
+      "models": [
+        {
+          "model": "open-model-8b"
+        }
+      ],
+      "openai_compatible_fallback": {
+        "available": false
+      },
+      "features": {
+        "tool_calling": true,
+        "streaming": true,
+        "vendor_only": []
+      }
+    }
+  ]
+}

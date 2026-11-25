@@ -74,7 +74,7 @@
       "state": "provider_inventory",
       "score": 75,
       "verification_level": "attested",
-      "reason": "Worst of 2 providers: vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented. Attested, not re-run: models in use, features in use, jurisdiction, producer, vendor-only features and their reconstruction paths, that the declared fallback works, that an SDK default endpoint is the vendor's, that any benchmarked model was run, every measured number.",
+      "reason": "Worst of 2 providers: vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented. Attested, not re-run: models in use, features in use (tool calling, streaming), vendor-only features in use, or that none are, jurisdiction, that the declared fallback works, that any benchmarked model was run, every measured number, reconstruction paths for vendor-only features, that an SDK default endpoint is the vendor's, producer.",
       "path": "provider-inventory.json",
       "sha256": "259c88f4b9cbb3cef2443f5db08691442b8d1b932498713be99fbf84756afe41"
     }
@@ -141,7 +141,16 @@
         "verification_level": "verified (benchmark arithmetic)",
         "cases": [],
         "features_not_exercised": [],
-        "reason": "gateway_a scores 25: every model in use has an accepted local alternative that exercised every feature in use."
+        "reason": "gateway_a scores 25: every model in use has an accepted local alternative that exercised every feature in use.",
+        "attested_claims": [
+          "models in use",
+          "features in use (tool calling, streaming)",
+          "vendor-only features in use, or that none are",
+          "jurisdiction",
+          "that the declared fallback works",
+          "that any benchmarked model was run",
+          "every measured number"
+        ]
       },
       {
         "provider_id": "vendor_b",
@@ -169,7 +178,15 @@
         "verification_level": "attested",
         "cases": [],
         "features_not_exercised": [],
-        "reason": "vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented."
+        "reason": "vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented.",
+        "attested_claims": [
+          "models in use",
+          "features in use (tool calling, streaming)",
+          "vendor-only features in use, or that none are",
+          "reconstruction paths for vendor-only features",
+          "jurisdiction",
+          "that an SDK default endpoint is the vendor's"
+        ]
       }
     ],
     "tested_alternatives": [
@@ -220,14 +237,15 @@
     ],
     "attested_claims": [
       "models in use",
-      "features in use",
+      "features in use (tool calling, streaming)",
+      "vendor-only features in use, or that none are",
       "jurisdiction",
-      "producer",
-      "vendor-only features and their reconstruction paths",
       "that the declared fallback works",
-      "that an SDK default endpoint is the vendor's",
       "that any benchmarked model was run",
-      "every measured number"
+      "every measured number",
+      "reconstruction paths for vendor-only features",
+      "that an SDK default endpoint is the vendor's",
+      "producer"
     ]
   }
 }

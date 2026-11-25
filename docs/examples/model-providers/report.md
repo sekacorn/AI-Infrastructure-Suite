@@ -18,7 +18,7 @@ Contract terms are operator-attested. This report is not legal advice.
 | identities | 100 | unverified | No evidence supplied. | - |
 | ontology | 100 | unverified | No evidence supplied. | - |
 | contract_terms | 100 | unverified | No evidence supplied. | - |
-| model_providers | 75 | attested | Worst of 2 providers: vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented. Attested, not re-run: models in use, features in use, jurisdiction, producer, vendor-only features and their reconstruction paths, that the declared fallback works, that an SDK default endpoint is the vendor's, that any benchmarked model was run, every measured number. | `provider-inventory.json` (`259c88f4b9cbb3cef2443f5db08691442b8d1b932498713be99fbf84756afe41`) |
+| model_providers | 75 | attested | Worst of 2 providers: vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented. Attested, not re-run: models in use, features in use (tool calling, streaming), vendor-only features in use, or that none are, jurisdiction, that the declared fallback works, that any benchmarked model was run, every measured number, reconstruction paths for vendor-only features, that an SDK default endpoint is the vendor's, producer. | `provider-inventory.json` (`259c88f4b9cbb3cef2443f5db08691442b8d1b932498713be99fbf84756afe41`) |
 
 ## Model providers
 

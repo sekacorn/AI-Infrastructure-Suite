@@ -1,0 +1,10 @@
+{
+  "schema_version": "exit-manifest.v1",
+  "vectors": {
+    "model_providers": {
+      "state": "provider_inventory",
+      "path": "provider-inventory.json",
+      "sha256": "72067d3e4e6463046d1f8deac85275d527e132c771cae5f73aecb845a7bc342c"
+    }
+  }
+}

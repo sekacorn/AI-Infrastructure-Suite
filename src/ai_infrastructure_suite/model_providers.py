@@ -12,6 +12,9 @@ below and **the vector takes the worst provider's score**.
   model; or a feature in use was not exercised; or not every model has an
   accepted alternative, no vendor-only feature is in use, and an
   OpenAI-compatible fallback is declared.
+- **25** also: the scanner derives the provider's own endpoint as local. The
+  workload already runs off any vendor; that the model is open or
+  self-hostable is attested.
 - **75**: a vendor-only feature is in use, with a documented reconstruction path.
 - **100**: a vendor-only feature with no reconstruction path; or not every model
   has an accepted alternative and no fallback is declared.
@@ -93,6 +96,7 @@ class ProviderScore:
     features_not_exercised: tuple[str, ...]
     models_covered: int
     reason: str
+    attested_claims: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -190,7 +194,12 @@ def _model_cases(
 
 
 def _reason(
-    provider: InventoryProvider, score: int, cases: tuple[str, ...], features: tuple[str, ...]
+    provider: InventoryProvider,
+    score: int,
+    cases: tuple[str, ...],
+    features: tuple[str, ...],
+    *,
+    local: bool = False,
 ) -> str:
     prefix = f"{provider.provider_id} scores {score}"
     if score == 100:
@@ -202,6 +211,11 @@ def _reason(
         )
     if score == 75:
         return f"{prefix}: a vendor-only feature is in use; a reconstruction path is documented."
+    if score == 25 and local:
+        return (
+            f"{prefix}: the scanner derives its endpoint as local, so the workload already "
+            "runs off any vendor."
+        )
     if score == 25:
         return (
             f"{prefix}: every model in use has an accepted local alternative that "
@@ -241,18 +255,30 @@ def score_provider(
         # The benchmark does not exercise streaming, so it is never covered.
         features.append("streaming")
 
+    benchmark_cases: list[str] = []
+    if all_covered:
+        if any(c and CASE_HOSTED_ALTERNATIVE in c for c in per_model.values()):
+            benchmark_cases.append(CASE_HOSTED_ALTERNATIVE)
+        if features:
+            benchmark_cases.append(CASE_FEATURE_NOT_EXERCISED)
+    # Only an endpoint the scanner classified itself counts: not an SDK
+    # default, and not a declaration.
+    local = provider.hosting == "local" and provider.hosting_verification == "derived"
+
     cases: list[str] = []
     if any(f.reconstruction == "none" for f in vendor_only):
         score, level = 100, ATTESTED_LEVEL
     elif vendor_only:
         score, level = 75, ATTESTED_LEVEL
+    elif all_covered and not benchmark_cases:
+        score, level = 25, BENCHMARK_LEVEL
+    elif local:
+        # The provider is already off any vendor. Never 0: the suite cannot
+        # show the model is open, self-hostable or still available.
+        score, level = 25, ATTESTED_LEVEL
     elif all_covered:
-        level = BENCHMARK_LEVEL
-        if any(c and CASE_HOSTED_ALTERNATIVE in c for c in per_model.values()):
-            cases.append(CASE_HOSTED_ALTERNATIVE)
-        if features:
-            cases.append(CASE_FEATURE_NOT_EXERCISED)
-        score = 50 if cases else 25
+        score, level = 50, BENCHMARK_LEVEL
+        cases = benchmark_cases
     elif provider.fallback.available:
         score, level = 50, ATTESTED_LEVEL
         cases.append(CASE_UNTESTED_FALLBACK)
@@ -261,6 +287,7 @@ def score_provider(
     else:
         score, level = 100, ATTESTED_LEVEL
     named = tuple(features) if CASE_FEATURE_NOT_EXERCISED in cases else ()
+    local_rule = local and score == 25 and level == ATTESTED_LEVEL
     return ProviderScore(
         provider=provider,
         score=score,
@@ -268,8 +295,32 @@ def score_provider(
         cases=tuple(cases),
         features_not_exercised=named,
         models_covered=covered,
-        reason=_reason(provider, score, tuple(cases), named),
+        reason=_reason(provider, score, tuple(cases), named, local=local_rule),
+        attested_claims=_provider_claims(provider, alternatives, local_rule=local_rule),
     )
+
+
+def _provider_claims(
+    provider: InventoryProvider, alternatives: list[AlternativeRow], *, local_rule: bool
+) -> tuple[str, ...]:
+    """Every operator- or producer-declared input this provider's score rests on."""
+    claims = [
+        "models in use",
+        "features in use (tool calling, streaming)",
+        "vendor-only features in use, or that none are",
+    ]
+    if provider.features.vendor_only:
+        claims.append("reconstruction paths for vendor-only features")
+    claims.append("jurisdiction")
+    if provider.fallback.available:
+        claims.append("that the declared fallback works")
+    if provider.hosting_verification == "sdk_default":
+        claims.append("that an SDK default endpoint is the vendor's")
+    if local_rule:
+        claims.append("that the local model is open or self-hostable")
+    if alternatives:
+        claims.extend(["that any benchmarked model was run", "every measured number"])
+    return tuple(claims)
 
 
 def _governing(scores: list[ProviderScore]) -> ProviderScore:
@@ -310,6 +361,7 @@ def _provider_row(item: ProviderScore, alternatives: list[AlternativeRow]) -> di
         "cases": list(item.cases),
         "features_not_exercised": list(item.features_not_exercised),
         "reason": item.reason,
+        "attested_claims": list(item.attested_claims),
     }
 
 
@@ -362,9 +414,9 @@ def build_vector(root: Path, entry: object) -> VectorResult:
         for provider in inventory.providers
     ]
     governing = _governing(scores)
-    attested = list(inventory.attested_claims())
-    if alternatives:
-        attested.extend(["that any benchmarked model was run", "every measured number"])
+    # Every declared input any provider's score rests on, once each, in order.
+    attested = list(dict.fromkeys(claim for item in scores for claim in item.attested_claims))
+    attested.append("producer")
     count = len(scores)
     row = {
         "state": "provider_inventory",

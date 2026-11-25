@@ -590,3 +590,150 @@ def test_the_manifest_schema_accepts_the_vector_only_with_its_two_states() -> No
     elsewhere = copy.deepcopy(worked)
     elsewhere["vectors"]["prompts"] = elsewhere["vectors"].pop("model_providers")
     assert not validator.is_valid(elsewhere)
+
+
+# --- a provider that is itself local --------------------------------------------------
+
+LOCAL_ONLY = DOCS / "model-providers-local"
+
+
+def _ollama(**overrides: Any) -> dict[str, Any]:
+    return _provider(
+        "local_ollama",
+        kind="ollama",
+        endpoint_origin="http://127.0.0.1:11434",
+        jurisdiction="not_applicable",
+        models=[{"model": "open-model-8b"}],
+        **overrides,
+    )
+
+
+def test_an_ollama_only_inventory_scores_25_never_0_and_never_100(tmp_path: Path) -> None:
+    report = _report(tmp_path, _inventory(_ollama()))
+    row = report["vectors"]["model_providers"]
+    provider = _provider_row(report, "local_ollama")
+
+    assert (row["score"], row["verification_level"]) == (25, "attested")
+    assert (provider["score"], provider["cases"]) == (25, [])
+    assert "derives its endpoint as local" in provider["reason"]
+    assert "that the local model is open or self-hostable" in provider["attested_claims"]
+    assert "that the local model is open or self-hostable" in row["reason"]
+
+
+def test_the_shipped_local_example_scores_25() -> None:
+    report = build_exit_report(LOCAL_ONLY / "manifest.json")
+    committed = json.loads((LOCAL_ONLY / "report.json").read_text(encoding="utf-8"))
+    for document in (report, committed):
+        document.pop("components")
+        document.pop("suite_version")
+
+    assert report == committed
+    assert report["vectors"]["model_providers"]["score"] == 25
+
+
+@pytest.mark.parametrize(
+    "origin", ["http://localhost:8000", "http://10.0.0.7:8000", "http://[::1]:8000"]
+)
+def test_any_endpoint_the_scanner_derives_as_local_scores_25(tmp_path: Path, origin: str) -> None:
+    inventory = _inventory(
+        _provider(endpoint_origin=origin, jurisdiction="not_applicable", hosting_declared="local")
+    )
+    assert _provider_row(_report(tmp_path, inventory))["score"] == 25
+
+
+def test_a_local_endpoint_declared_hosted_does_not_get_the_local_rule(tmp_path: Path) -> None:
+    declared_hosted = _ollama(hosting_declared="hosted")
+    declared_hosted["jurisdiction"] = "unknown"
+    report = _report(tmp_path, _inventory(declared_hosted))
+    assert _provider_row(report, "local_ollama")["score"] == 100
+
+
+def test_an_sdk_default_endpoint_never_gets_the_local_rule(tmp_path: Path) -> None:
+    inventory = _inventory(_provider(kind="anthropic", endpoint_origin=None))
+    assert _provider_row(_report(tmp_path, inventory))["score"] == 100
+
+
+def test_a_vendor_only_feature_still_governs_a_local_provider(tmp_path: Path) -> None:
+    none = _ollama(features={"vendor_only": [{"feature": "file_search", "reconstruction": "none"}]})
+    assert _provider_row(_report(tmp_path, _inventory(none)), "local_ollama")["score"] == 100
+    documented = _ollama(
+        features={"vendor_only": [{"feature": "prompt_cache", "reconstruction": "documented"}]}
+    )
+    assert _provider_row(_report(tmp_path, _inventory(documented)), "local_ollama")["score"] == 75
+
+
+def test_a_local_provider_with_only_a_hosted_alternative_is_still_25(tmp_path: Path) -> None:
+    hosted = _for_model(_hosted(), "open-model-8b")
+    hosted["baseline"].update(
+        provider_kind="ollama",
+        endpoint_origin="http://127.0.0.1:11434",
+        deployment_declared="local",
+    )
+    provider = _provider_row(_report(tmp_path, _inventory(_ollama()), [hosted]), "local_ollama")
+    assert (provider["score"], provider["verification_level"], provider["cases"]) == (
+        25,
+        "attested",
+        [],
+    )
+
+
+def test_a_local_provider_with_an_accepted_local_alternative_is_25_verified(tmp_path: Path) -> None:
+    local = _for_model(_local_without_tools(), "open-model-8b")
+    local["baseline"].update(
+        provider_kind="ollama",
+        endpoint_origin="http://127.0.0.1:11434",
+        deployment_declared="local",
+    )
+    provider = _provider_row(_report(tmp_path, _inventory(_ollama()), [local]), "local_ollama")
+    assert (provider["score"], provider["verification_level"]) == (
+        25,
+        "verified (benchmark arithmetic)",
+    )
+    assert "that the local model is open or self-hostable" not in provider["attested_claims"]
+
+
+# --- every declared input is listed as attested ----------------------------------------
+
+
+DECLARED = [
+    "models in use",
+    "features in use (tool calling, streaming)",
+    "vendor-only features in use, or that none are",
+    "jurisdiction",
+]
+
+
+def test_a_verified_50_still_lists_every_declared_input(tmp_path: Path) -> None:
+    inventory = _inventory(_provider(features={"tool_calling": True, "streaming": True}))
+    report = _report(tmp_path, inventory, [_hosted()])
+    provider = _provider_row(report)
+
+    assert (provider["score"], provider["verification_level"]) == (
+        50,
+        "verified (benchmark arithmetic)",
+    )
+    for claim in [*DECLARED, "that any benchmarked model was run", "every measured number"]:
+        assert claim in provider["attested_claims"], claim
+        assert claim in report["model_providers"]["attested_claims"], claim
+        assert claim in report["vectors"]["model_providers"]["reason"], claim
+
+
+def test_reconstruction_paths_are_listed_whenever_a_vendor_only_feature_is(tmp_path: Path) -> None:
+    documented = _inventory(
+        _provider(
+            features={"vendor_only": [{"feature": "prompt_cache", "reconstruction": "documented"}]}
+        )
+    )
+    claims = _provider_row(_report(tmp_path, documented))["attested_claims"]
+    assert "reconstruction paths for vendor-only features" in claims
+    plain = _provider_row(_report(tmp_path, _inventory(_provider())))["attested_claims"]
+    assert "reconstruction paths for vendor-only features" not in plain
+    assert "vendor-only features in use, or that none are" in plain
+
+
+def test_every_provider_lists_every_declared_input(tmp_path: Path) -> None:
+    report = build_exit_report(WORKED / "manifest.json")
+    for provider in report["model_providers"]["providers"]:
+        for claim in DECLARED:
+            assert claim in provider["attested_claims"], (provider["provider_id"], claim)
+    assert report["model_providers"]["attested_claims"][-1] == "producer"

@@ -3,3 +3,4 @@ docs/examples/embedding-portability/** text eol=lf
 docs/examples/provider-inventory/* text eol=lf
 docs/examples/model-swap-evidence/* text eol=lf
 docs/examples/model-providers/* text eol=lf
+docs/examples/model-providers-local/* text eol=lf

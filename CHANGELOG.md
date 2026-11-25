@@ -21,7 +21,10 @@ scores are unchanged for the same evidence. The next release is 0.2.0b1.
   in rubric 2**, because the suite never runs a model. A 50 always names
   which case applied. Accepted alternatives are recomputed from the
   benchmark's numbers with a 20-sample floor; cost is ignored; jurisdiction is
-  shown and never scored. A new level, `verified (benchmark arithmetic)`,
+  shown and never scored. A provider whose endpoint the scanner derives as
+  local scores 25, so an Ollama-only system is 25, not 100; that its model is
+  open or self-hostable is attested. Every declared input a score rests on is
+  listed in `attested_claims`. A new level, `verified (benchmark arithmetic)`,
   marks a provider scored from benchmark evidence. See
   `docs/exit-report.md`, and the worked example in
   `docs/examples/model-providers/`.

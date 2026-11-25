@@ -1,0 +1,164 @@
+{
+  "schema_version": "exit-report.v2",
+  "rubric_version": "2",
+  "suite_version": "0.1.0b4",
+  "manifest_sha256": "956a229eb756ddfbc83b9fd0a32cc6a97c12d13100b3df4b6aac7d4485db2366",
+  "vectors": {
+    "policies": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "prompts": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "embeddings": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "fine_tunes": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "memory": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "audit_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "cost_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "tool_connectors": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "identities": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "ontology": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "contract_terms": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "model_providers": {
+      "state": "provider_inventory",
+      "score": 25,
+      "verification_level": "attested",
+      "reason": "Worst of 1 provider: local_ollama scores 25: the scanner derives its endpoint as local, so the workload already runs off any vendor. Attested, not re-run: models in use, features in use (tool calling, streaming), vendor-only features in use, or that none are, jurisdiction, that the local model is open or self-hostable, producer.",
+      "path": "provider-inventory.json",
+      "sha256": "72067d3e4e6463046d1f8deac85275d527e132c771cae5f73aecb845a7bc342c"
+    }
+  },
+  "components": {
+    "agentforge-oss": {
+      "version": "0.5.6",
+      "status": "ok"
+    },
+    "agentpolicypack": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aiauditlog": {
+      "version": "0.2.0b2",
+      "status": "ok"
+    },
+    "aimeter-oss": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "modelswapbench": {
+      "version": "0.1.0b5",
+      "status": "ok"
+    },
+    "openontologylite": {
+      "version": "0.2.0b3",
+      "status": "ok"
+    },
+    "privateaistack": {
+      "version": null,
+      "status": "optional"
+    }
+  },
+  "legal_notice": "Contract terms are operator-attested. This report is not legal advice.",
+  "model_providers": {
+    "inventory": {
+      "path": "provider-inventory.json",
+      "sha256": "72067d3e4e6463046d1f8deac85275d527e132c771cae5f73aecb845a7bc342c",
+      "generated_by_tool": "example-tool",
+      "generated_by_version": "1.0",
+      "generated_by_verification": "attested"
+    },
+    "governing_provider": "local_ollama",
+    "providers": [
+      {
+        "provider_id": "local_ollama",
+        "kind": "ollama",
+        "endpoint_origin": "http://localhost:11434",
+        "hosting": "local",
+        "hosting_verification": "derived",
+        "jurisdiction": "not_applicable",
+        "jurisdiction_verification": "attested",
+        "models": [
+          "open-model-8b"
+        ],
+        "models_with_accepted_alternative": 0,
+        "tested_alternatives": 0,
+        "openai_compatible_fallback": false,
+        "tool_calling": true,
+        "streaming": true,
+        "vendor_only_features": [],
+        "score": 25,
+        "verification_level": "attested",
+        "cases": [],
+        "features_not_exercised": [],
+        "reason": "local_ollama scores 25: the scanner derives its endpoint as local, so the workload already runs off any vendor.",
+        "attested_claims": [
+          "models in use",
+          "features in use (tool calling, streaming)",
+          "vendor-only features in use, or that none are",
+          "jurisdiction",
+          "that the local model is open or self-hostable"
+        ]
+      }
+    ],
+    "tested_alternatives": [],
+    "attested_claims": [
+      "models in use",
+      "features in use (tool calling, streaming)",
+      "vendor-only features in use, or that none are",
+      "jurisdiction",
+      "that the local model is open or self-hostable",
+      "producer"
+    ]
+  }
+}
