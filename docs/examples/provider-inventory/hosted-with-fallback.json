@@ -1,0 +1,56 @@
+{
+  "schema_version": "provider-inventory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "providers": [
+    {
+      "provider_id": "gateway_a",
+      "kind": "openai_compatible",
+      "preset": "vendor_a_preset",
+      "preset_source": "built_in",
+      "endpoint_origin": "https://llm.vendor-a.example",
+      "jurisdiction": "XA",
+      "models": [
+        {
+          "model": "model-large"
+        },
+        {
+          "model": "model-small"
+        }
+      ],
+      "openai_compatible_fallback": {
+        "available": true,
+        "provider_id": "local_vllm"
+      },
+      "features": {
+        "tool_calling": true,
+        "streaming": true,
+        "vendor_only": []
+      },
+      "hosting_declared": "hosted"
+    },
+    {
+      "provider_id": "local_vllm",
+      "kind": "openai_compatible",
+      "preset": "local_vllm",
+      "preset_source": "built_in",
+      "endpoint_origin": "http://localhost:8000",
+      "jurisdiction": "not_applicable",
+      "models": [
+        {
+          "model": "open-model-8b"
+        }
+      ],
+      "openai_compatible_fallback": {
+        "available": false
+      },
+      "features": {
+        "tool_calling": true,
+        "streaming": false,
+        "vendor_only": []
+      }
+    }
+  ]
+}

@@ -8,6 +8,18 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+### Added
+- **`provider-inventory.v1`**, a new evidence format listing the model
+  providers a system calls, with a packaged JSON Schema, four example
+  documents, and a bounded reader in
+  `ai_infrastructure_suite.provider_inventory`. It is the evidence for the
+  `model_providers` lock-in vector, which a later release adds; nothing reads
+  it into an exit report yet, and no score changes.
+- Hosting in an inventory is **derived** from each endpoint origin with the
+  same no-DNS rule AgentForge and ModelSwapBench use, and a declaration may
+  only add hosted-ness. Endpoint origins carrying credentials, a path or a
+  query are refused, and the reader's errors never repeat a document value.
+
 ## [0.1.0b4] - 2026-11-24
 
 A patch release. Exit reports that carry re-embed records now match the
