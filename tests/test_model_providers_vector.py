@@ -737,3 +737,54 @@ def test_every_provider_lists_every_declared_input(tmp_path: Path) -> None:
         for claim in DECLARED:
             assert claim in provider["attested_claims"], (provider["provider_id"], claim)
     assert report["model_providers"]["attested_claims"][-1] == "producer"
+
+
+# --- optional producer markers (suite 0.2.0b2) -----------------------------------------
+
+
+def test_registry_models_and_an_override_are_listed_as_attested(tmp_path: Path) -> None:
+    from ai_infrastructure_suite.provider_inventory import (
+        CLAIM_ENDPOINT_OVERRIDE,
+        CLAIM_REGISTRY_MODELS,
+    )
+
+    marked = _provider(
+        kind="openai",
+        endpoint_origin=None,
+        jurisdiction="unknown",
+        endpoint_override_present=True,
+        models=[{"model": "model-large", "source": "registry"}],
+    )
+    report = _report(tmp_path, _inventory(marked))
+    provider = _provider_row(report)
+
+    for claim in (CLAIM_REGISTRY_MODELS, CLAIM_ENDPOINT_OVERRIDE):
+        assert claim in provider["attested_claims"], claim
+        assert claim in report["model_providers"]["attested_claims"], claim
+        assert claim in report["vectors"]["model_providers"]["reason"], claim
+
+
+def test_the_markers_never_change_a_score(tmp_path: Path) -> None:
+    plain = _provider(kind="openai", endpoint_origin=None, jurisdiction="unknown")
+    marked = copy.deepcopy(plain)
+    marked["endpoint_override_present"] = True
+    marked["models"] = [{"model": "model-large", "source": "registry"}]
+
+    before = _provider_row(_report(tmp_path, _inventory(plain)))
+    after = _provider_row(_report(tmp_path, _inventory(marked)))
+    assert (before["score"], before["verification_level"], before["cases"]) == (
+        after["score"],
+        after["verification_level"],
+        after["cases"],
+    )
+
+
+def test_an_unmarked_provider_lists_neither_marker(tmp_path: Path) -> None:
+    from ai_infrastructure_suite.provider_inventory import (
+        CLAIM_ENDPOINT_OVERRIDE,
+        CLAIM_REGISTRY_MODELS,
+    )
+
+    claims = _provider_row(_report(tmp_path, _inventory(_provider())))["attested_claims"]
+    assert CLAIM_REGISTRY_MODELS not in claims
+    assert CLAIM_ENDPOINT_OVERRIDE not in claims

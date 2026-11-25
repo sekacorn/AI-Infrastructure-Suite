@@ -52,6 +52,14 @@ PRESET_SOURCES: Final = frozenset({"built_in", "user"})
 HOSTING: Final = frozenset({"local", "hosted"})
 JURISDICTION_LITERALS: Final = frozenset({"unknown", "not_applicable"})
 RECONSTRUCTION: Final = frozenset({"documented", "none"})
+MODEL_SOURCES: Final = frozenset({"declared", "registry"})
+
+#: Attested-claim text for the two optional producer markers.
+CLAIM_REGISTRY_MODELS: Final = "models from registry, not confirmed in use"
+CLAIM_ENDPOINT_OVERRIDE: Final = (
+    "an SDK endpoint override is present and not reflected; "
+    "the vendor's default endpoint is assumed"
+)
 
 #: 0.0.0.0 is accepted because development servers bind it to mean "this host".
 #: It is a host literal compared against, never an address this code binds.
@@ -66,9 +74,10 @@ class ProviderInventoryError(ValueError):
     """A provider inventory is malformed, inconsistent, or exceeds a bound."""
 
 
-#: Documentation (RFC 5737, RFC 3849) and benchmarking (RFC 2544) ranges.
+#: Documentation (RFC 5737, RFC 3849), benchmarking (RFC 2544), reserved
+#: (RFC 1112, 240.0.0.0/4) and limited broadcast (255.255.255.255) addresses.
 #: Python's ``is_private`` includes them, but they are neither this machine nor
-#: a private network, so an endpoint there is hosted. The same five ranges are
+#: a private network, so an endpoint there is hosted. The same ranges are
 #: excluded in AgentForge, ModelSwapBench and the AI Infrastructure Suite, and
 #: the shared ``endpoint-locality-cases.v1`` table pins all three.
 NOT_LOCAL_NETWORKS: Final = tuple(
@@ -78,6 +87,8 @@ NOT_LOCAL_NETWORKS: Final = tuple(
         "198.51.100.0/24",
         "203.0.113.0/24",
         "198.18.0.0/15",
+        "240.0.0.0/4",
+        "255.255.255.255/32",
         "2001:db8::/32",
     )
 )
@@ -153,6 +164,12 @@ class InventoryProvider:
     models: tuple[str, ...]
     fallback: Fallback
     features: Features
+    #: Models the producer took from its registry rather than from a
+    #: declaration: from registry, not confirmed in use. A subset of ``models``.
+    registry_models: tuple[str, ...] = ()
+    #: An SDK endpoint override is set for this SDK-default provider. Present,
+    #: not reflected: ``endpoint_origin`` stays null and hosting stays hosted.
+    endpoint_override_present: bool = False
 
     @property
     def jurisdiction_verification(self) -> str:
@@ -190,6 +207,10 @@ class ProviderInventory:
             claims.append("that the declared fallback works")
         if any(p.hosting_verification == "sdk_default" for p in self.providers):
             claims.append("that an SDK default endpoint is the vendor's")
+        if any(p.registry_models for p in self.providers):
+            claims.append(CLAIM_REGISTRY_MODELS)
+        if any(p.endpoint_override_present for p in self.providers):
+            claims.append(CLAIM_ENDPOINT_OVERRIDE)
         return tuple(claims)
 
 
@@ -269,17 +290,24 @@ def _jurisdiction(value: object, label: str) -> str:
     raise ProviderInventoryError(f"Invalid {label}.")
 
 
-def _models(value: object, label: str) -> tuple[str, ...]:
+def _models(value: object, label: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """The model names, and those of them marked as taken from a registry."""
     if not isinstance(value, list) or not value or len(value) > MAX_MODELS_PER_PROVIDER:
         raise ProviderInventoryError(f"Invalid {label}.")
     names: list[str] = []
+    registry: list[str] = []
     for item in value:
         entry = _mapping(item, label)
-        _keys(entry, {"model"}, label)
-        names.append(_text(entry["model"], label))
+        _keys(entry, {"model"}, label, frozenset({"source"}))
+        name = _text(entry["model"], label)
+        names.append(name)
+        if "source" in entry and _enum(entry["source"], MODEL_SOURCES, f"{label} source") == (
+            "registry"
+        ):
+            registry.append(name)
     if len(set(names)) != len(names):
         raise ProviderInventoryError(f"Duplicate model in {label}.")
-    return tuple(names)
+    return tuple(names), tuple(registry)
 
 
 def _features(value: object, label: str) -> Features:
@@ -359,7 +387,7 @@ def _provider(value: object, index: int) -> InventoryProvider:
             "features",
         },
         label,
-        frozenset({"hosting_declared"}),
+        frozenset({"hosting_declared", "endpoint_override_present"}),
     )
     provider_id = _identifier(entry["provider_id"], f"{label} provider_id")
     kind = _enum(entry["kind"], PROVIDER_KINDS, f"{label} kind")
@@ -382,6 +410,16 @@ def _provider(value: object, index: int) -> InventoryProvider:
         else None
     )
     hosting = _derive_hosting(kind, origin, declared, label)
+    override = "endpoint_override_present" in entry
+    if override:
+        if entry["endpoint_override_present"] is not True:
+            raise ProviderInventoryError(
+                f"Invalid {label} endpoint_override_present; omit it when absent."
+            )
+        if origin is not None or kind not in SDK_DEFAULT_HOSTED_KINDS:
+            raise ProviderInventoryError(
+                f"{label} endpoint_override_present applies only to a provider at its SDK default."
+            )
     jurisdiction = _jurisdiction(entry["jurisdiction"], f"{label} jurisdiction")
     if jurisdiction == "not_applicable" and hosting != "local":
         raise ProviderInventoryError(
@@ -390,6 +428,7 @@ def _provider(value: object, index: int) -> InventoryProvider:
     fallback = _fallback(entry["openai_compatible_fallback"], f"{label} openai_compatible_fallback")
     if fallback.provider_id == provider_id:
         raise ProviderInventoryError(f"{label} cannot be its own fallback.")
+    models, registry_models = _models(entry["models"], f"{label} models")
     return InventoryProvider(
         provider_id=provider_id,
         kind=kind,
@@ -399,9 +438,11 @@ def _provider(value: object, index: int) -> InventoryProvider:
         hosting_declared=declared,
         hosting=hosting,
         jurisdiction=jurisdiction,
-        models=_models(entry["models"], f"{label} models"),
+        models=models,
         fallback=fallback,
         features=_features(entry["features"], f"{label} features"),
+        registry_models=registry_models,
+        endpoint_override_present=override,
     )
 
 
