@@ -46,6 +46,8 @@ from ai_infrastructure_suite.model_swap_evidence import (
     parse_model_swap_evidence,
 )
 from ai_infrastructure_suite.provider_inventory import (
+    CLAIM_ENDPOINT_OVERRIDE,
+    CLAIM_REGISTRY_MODELS,
     MAX_INVENTORY_BYTES,
     InventoryProvider,
     ProviderInventory,
@@ -316,6 +318,10 @@ def _provider_claims(
         claims.append("that the declared fallback works")
     if provider.hosting_verification == "sdk_default":
         claims.append("that an SDK default endpoint is the vendor's")
+    if provider.endpoint_override_present:
+        claims.append(CLAIM_ENDPOINT_OVERRIDE)
+    if provider.registry_models:
+        claims.append(CLAIM_REGISTRY_MODELS)
     if local_rule:
         claims.append("that the local model is open or self-hostable")
     if alternatives:

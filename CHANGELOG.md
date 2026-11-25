@@ -8,6 +8,19 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+### Added
+- **Two optional producer markers in `provider-inventory.v1`**, additive:
+  `models[].source` (`"declared"` or `"registry"`) and a provider-level
+  `endpoint_override_present: true`. A model marked `"registry"` was taken
+  from the producer's registry, not confirmed in use; an override is present
+  for an SDK-default provider but not reflected, so the origin stays null and
+  hosting stays hosted. Neither changes a score; each is listed in the
+  provider's and the vector's `attested_claims`. Both are emitted only when
+  they carry information, so an inventory without them still validates
+  against suite 0.2.0b1's schema; one that uses either needs this version.
+  A test pins both sides of that boundary against a copy of the 0.2.0b1
+  schema. New example: `docs/examples/provider-inventory/registry-and-override.json`.
+
 ### Changed
 - **Reserved and limited-broadcast addresses are hosted, not local.**
   `240.0.0.0/4` (RFC 1112 reserved) and `255.255.255.255`, and their
