@@ -56,6 +56,15 @@ scores are unchanged for the same evidence. The next release is 0.2.0b1.
   agree.
 
 ### Changed
+- **The documentation and benchmarking ranges are hosted, not local.**
+  `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `198.18.0.0/15` and
+  `2001:db8::/32`, and their IPv4-mapped forms. Python's `is_private`
+  includes them, so an endpoint there was classified as local. AgentForge and
+  ModelSwapBench make the same change.
+- **`endpoint-locality-cases.v1`**, a packaged table of endpoints and whether
+  each is local, with a JSON Schema. Every copy of the no-DNS locality rule
+  (AgentForge, ModelSwapBench and this package) is tested against it; this
+  copy is canonical.
 - `VECTORS` grows from eleven to twelve; `model_providers` is appended, so the
   first eleven keep their order.
 - The swap-evidence reader now refuses a side declared `local` at an endpoint
