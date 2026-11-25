@@ -8,6 +8,18 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.2.0b2] - 2026-11-25
+
+A patch release for the `model_providers` vector. `provider-inventory.v1`
+gains two optional producer markers, which AgentForge 0.5.7's
+`forge providers inventory` writes, and reserved and broadcast addresses are
+no longer treated as local. Scores, report shape and the eleven original
+vectors are unchanged.
+
+**Compatibility.** An inventory that uses neither marker is still readable by
+0.2.0b1. One that uses either needs this version: 0.2.0b1's closed schema
+refuses it.
+
 ### Added
 - **Two optional producer markers in `provider-inventory.v1`**, additive:
   `models[].source` (`"declared"` or `"registry"`) and a provider-level

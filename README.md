@@ -6,7 +6,7 @@
 
 It contains **none of the seven projects' business logic**. It installs them, describes them, and diagnoses them. Each component remains independently installable and independently useful.
 
-> **Status:** `0.2.0b1` **Beta release**. The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
+> **Status:** `0.2.0b2` **Beta release**. The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
 
 > **Independent project.** Linux of AI and AI Infrastructure Suite are independent open-source projects. They are **not affiliated with, endorsed by, or sponsored by the Linux Foundation**. "Linux of AI" is used as a descriptive name for an open, portable infrastructure ecosystem. This package is not an operating system, not a kernel, and not a replacement for either.
 

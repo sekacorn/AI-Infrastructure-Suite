@@ -1,6 +1,6 @@
 # Vendor exit evidence
 
-Suite 0.2.0b1 | Rubric 2
+Suite 0.2.0b2 | Rubric 2
 Manifest SHA-256: `18d374bb936731ac7f4783d4c37ba3ba2670a3aaa1d6f9ac9d0dfdf92989b1ac`
 
 Contract terms are operator-attested. This report is not legal advice.
@@ -26,6 +26,6 @@ Contract terms are operator-attested. This report is not legal advice.
 - agentpolicypack: 0.2.0b1 (ok)
 - aiauditlog: 0.2.0b2 (ok)
 - aimeter-oss: 0.2.0b1 (ok)
-- modelswapbench: 0.1.0b5 (ok)
+- modelswapbench: 0.1.0b6 (ok)
 - openontologylite: 0.2.0b3 (ok)
 - privateaistack: absent (optional)
