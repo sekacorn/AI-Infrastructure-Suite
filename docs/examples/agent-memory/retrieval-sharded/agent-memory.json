@@ -1,0 +1,50 @@
+{
+  "schema_version": "agent-memory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "export": {
+    "export_id": "exp-sharded",
+    "created_at": "2026-12-01T10:00:00Z",
+    "redaction_profile": "standard",
+    "source": {
+      "system": "example-agent",
+      "backend": "pgvector"
+    }
+  },
+  "stores": [
+    {
+      "store_id": "kb-memory",
+      "kind": "retrieval",
+      "embeddings": {
+        "inventory": {
+          "path": "embeddings/embedding-portability.json",
+          "sha256": "240f929548774db51c49ba4a5e3d8559160d76340977baf1308968f100e0b14c"
+        },
+        "inventory_store_id": "kb-memory"
+      },
+      "items": {
+        "layout": "sharded_jsonl",
+        "shards": [
+          {
+            "path": "items/0000.jsonl",
+            "sha256": "0cc6e703b2a0c33c2154ec568b1b72f4a334d5d236948eb7aad9dec57683a7b9",
+            "record_count": 3
+          },
+          {
+            "path": "items/0001.jsonl",
+            "sha256": "da5c648517b96862fc34887eb580a2253472040452b91a4ab18e8cbaec27387a",
+            "record_count": 2
+          }
+        ]
+      },
+      "counts": {
+        "active": 5,
+        "quarantined": 0,
+        "deleted_by_policy": 0
+      },
+      "tombstones": []
+    }
+  ]
+}

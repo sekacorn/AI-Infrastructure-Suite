@@ -8,6 +8,18 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+### Added
+- **`agent-memory.v1`**, a portable format for an agent's memory (Phase 4a,
+  checkpoint 1), with a packaged JSON Schema, six example exports and a
+  bounded reader in `ai_infrastructure_suite.agent_memory`. Retrieval documents
+  or a conversation; inline or sharded JSONL with a digest per shard; every
+  item bound to its text by `content_sha256`. Items deleted under policy leave
+  a tombstone with only an ID and a time. Imported items may be quarantined
+  and must then record their provenance. Vectors are never stored here: a store
+  references an `embedding-portability.v1` document whose records are its
+  items. Reading only: the `memory` vector does not score it yet. See
+  `docs/agent-memory.md`.
+
 ## [0.2.0b2] - 2026-11-25
 
 A patch release for the `model_providers` vector. `provider-inventory.v1`

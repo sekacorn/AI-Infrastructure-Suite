@@ -1,0 +1,124 @@
+{
+  "schema_version": "agent-memory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "export": {
+    "export_id": "exp-conversation",
+    "created_at": "2026-12-01T10:00:00Z",
+    "redaction_profile": "standard",
+    "source": {
+      "system": "example-agent",
+      "backend": "conversation_buffer"
+    }
+  },
+  "stores": [
+    {
+      "store_id": "session-transcript",
+      "kind": "conversation",
+      "embeddings": null,
+      "items": {
+        "layout": "single_file",
+        "records": [
+          {
+            "item_id": "msg-000000",
+            "kind": "message",
+            "sequence": 0,
+            "role": "system",
+            "name": null,
+            "text": "You are a support assistant for an example store.",
+            "tool_calls": [],
+            "tool_results": [],
+            "content_sha256": "5bbe632827ec16c3c6ced3f434450d12d32d5829fed8cdebfddd723e68046946",
+            "metadata": {},
+            "created_at": null,
+            "status": "active",
+            "provenance": null
+          },
+          {
+            "item_id": "msg-000001",
+            "kind": "message",
+            "sequence": 1,
+            "role": "user",
+            "name": null,
+            "text": "What time is it in the warehouse timezone?",
+            "tool_calls": [],
+            "tool_results": [],
+            "content_sha256": "5250cc1282ee53d2d633a245460094f89a3b18b8a7164390da48116163ef784b",
+            "metadata": {},
+            "created_at": null,
+            "status": "active",
+            "provenance": null
+          },
+          {
+            "item_id": "msg-000002",
+            "kind": "message",
+            "sequence": 2,
+            "role": "assistant",
+            "name": null,
+            "text": "",
+            "tool_calls": [
+              {
+                "id": "call-0001",
+                "name": "time",
+                "arguments": {
+                  "tz": "UTC"
+                }
+              }
+            ],
+            "tool_results": [],
+            "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "metadata": {},
+            "created_at": null,
+            "status": "active",
+            "provenance": null
+          },
+          {
+            "item_id": "msg-000003",
+            "kind": "message",
+            "sequence": 3,
+            "role": "tool",
+            "name": "time",
+            "text": "",
+            "tool_calls": [],
+            "tool_results": [
+              {
+                "tool_call_id": "call-0001",
+                "name": "time",
+                "content": "2026-12-01T10:00:00Z",
+                "is_error": false
+              }
+            ],
+            "content_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "metadata": {},
+            "created_at": null,
+            "status": "active",
+            "provenance": null
+          },
+          {
+            "item_id": "msg-000004",
+            "kind": "message",
+            "sequence": 4,
+            "role": "assistant",
+            "name": null,
+            "text": "It is 10:00 UTC in the warehouse.",
+            "tool_calls": [],
+            "tool_results": [],
+            "content_sha256": "a8f572af563690950768aba2a50b0e3e3c6bf09ef93adcd6857f641e33e012a9",
+            "metadata": {},
+            "created_at": null,
+            "status": "active",
+            "provenance": null
+          }
+        ]
+      },
+      "counts": {
+        "active": 5,
+        "quarantined": 0,
+        "deleted_by_policy": 0
+      },
+      "tombstones": []
+    }
+  ]
+}

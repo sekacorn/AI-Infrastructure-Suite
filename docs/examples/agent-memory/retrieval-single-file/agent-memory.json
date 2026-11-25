@@ -1,0 +1,78 @@
+{
+  "schema_version": "agent-memory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "export": {
+    "export_id": "exp-single-file",
+    "created_at": "2026-12-01T10:00:00Z",
+    "redaction_profile": "standard",
+    "source": {
+      "system": "example-agent",
+      "backend": "sqlite"
+    }
+  },
+  "stores": [
+    {
+      "store_id": "support-memory",
+      "kind": "retrieval",
+      "embeddings": null,
+      "items": {
+        "layout": "single_file",
+        "records": [
+          {
+            "item_id": "proc-escalation",
+            "kind": "document",
+            "text": "Escalate a ticket after two failed resolution attempts.",
+            "content_sha256": "d9fb93911968fc056c992638a0031cc8af5d040e897dd2738022483c69e172ad",
+            "metadata": {
+              "topic": "support",
+              "tags": [
+                "procedure",
+                "escalation"
+              ]
+            },
+            "created_at": "2026-10-02T09:00:00Z",
+            "status": "active",
+            "provenance": null
+          },
+          {
+            "item_id": "proc-password-reset",
+            "kind": "document",
+            "text": "Reset passwords only after verifying the account owner.",
+            "content_sha256": "facad823cc45ca7288a561ac78fff2b43cc6d93fe6c2036ad1d7808c9f6003ae",
+            "metadata": {
+              "topic": "security"
+            },
+            "created_at": "2026-10-02T09:00:00Z",
+            "status": "active",
+            "provenance": null
+          },
+          {
+            "item_id": "proc-refund",
+            "kind": "document",
+            "text": "Refunds over the standard limit need a second approver.",
+            "content_sha256": "688014e11f2ec6ad7e0b5aa5caee3fc0d3ff73735426f63fef6913a270264515",
+            "metadata": {
+              "topic": "billing",
+              "limits": {
+                "currency": "XTS",
+                "standard": 100
+              }
+            },
+            "created_at": "2026-10-02T09:00:00Z",
+            "status": "active",
+            "provenance": null
+          }
+        ]
+      },
+      "counts": {
+        "active": 3,
+        "quarantined": 0,
+        "deleted_by_policy": 0
+      },
+      "tombstones": []
+    }
+  ]
+}

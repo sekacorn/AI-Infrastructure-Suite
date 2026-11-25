@@ -1,0 +1,314 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/ai-infrastructure-suite/schemas/agent-memory.schema.json",
+  "title": "agent-memory.v1",
+  "description": "A portable export of an agent's memory: retrieval documents or a conversation, with tombstones for items deleted under policy and provenance for imported items. Vectors are never stored here; a store with embeddings references an embedding-portability.v1 document whose record_id is each item's item_id. Cross-field rules (ordering, uniqueness, counts, digests, metadata depth) are enforced by the reader.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_by", "export", "stores"],
+  "properties": {
+    "schema_version": { "const": "agent-memory.v1" },
+    "generated_by": { "$ref": "#/$defs/producer" },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["export_id", "created_at", "redaction_profile", "source"],
+      "properties": {
+        "export_id": { "$ref": "#/$defs/identifier" },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "redaction_profile": {
+          "description": "The redaction profile applied at export, or null when none was.",
+          "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+        },
+        "source": {
+          "description": "Names the exporting system and backend kind. Never a DSN, path, URL or credential.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["system", "backend"],
+          "properties": {
+            "system": { "$ref": "#/$defs/identifier" },
+            "backend": { "$ref": "#/$defs/identifier" }
+          }
+        }
+      }
+    },
+    "stores": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/store" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+    },
+    "timestamp": {
+      "description": "UTC, RFC 3339 with a Z suffix.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "producer": {
+      "description": "A producer string. Not trusted.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "version"],
+      "properties": {
+        "tool": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "version": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "count": { "type": "integer", "minimum": 0, "maximum": 100000 },
+    "store": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["store_id", "kind", "embeddings", "items", "counts", "tombstones"],
+      "properties": {
+        "store_id": { "$ref": "#/$defs/identifier" },
+        "kind": { "enum": ["retrieval", "conversation"] },
+        "embeddings": {
+          "description": "null, or a reference to the embedding-portability.v1 document holding this store's vectors.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["inventory", "inventory_store_id"],
+              "properties": {
+                "inventory": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["path", "sha256"],
+                  "properties": {
+                    "path": { "$ref": "#/$defs/relative_path" },
+                    "sha256": { "$ref": "#/$defs/sha256" }
+                  }
+                },
+                "inventory_store_id": { "$ref": "#/$defs/identifier" }
+              }
+            }
+          ]
+        },
+        "items": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["layout", "records"],
+              "properties": {
+                "layout": { "const": "single_file" },
+                "records": {
+                  "type": "array",
+                  "maxItems": 100000,
+                  "items": { "$ref": "#/$defs/item" }
+                }
+              }
+            },
+            {
+              "description": "Items streamed from JSONL shards, one item per line, each shard with its own digest. One failed shard invalidates the store.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["layout", "shards"],
+              "properties": {
+                "layout": { "const": "sharded_jsonl" },
+                "shards": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1024,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["path", "sha256", "record_count"],
+                    "properties": {
+                      "path": { "$ref": "#/$defs/relative_path" },
+                      "sha256": { "$ref": "#/$defs/sha256" },
+                      "record_count": { "type": "integer", "minimum": 1, "maximum": 100000 }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["active", "quarantined", "deleted_by_policy"],
+          "properties": {
+            "active": { "$ref": "#/$defs/count" },
+            "quarantined": { "$ref": "#/$defs/count" },
+            "deleted_by_policy": { "$ref": "#/$defs/count" }
+          }
+        },
+        "tombstones": {
+          "description": "Items deleted under policy: an id and a time, never content.",
+          "type": "array",
+          "maxItems": 100000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["item_id", "deleted_at"],
+            "properties": {
+              "item_id": { "$ref": "#/$defs/identifier" },
+              "deleted_at": { "$ref": "#/$defs/timestamp" }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "description": "Where an imported item came from. Recorded by the importing system.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_system",
+        "source_backend",
+        "source_store_id",
+        "export_id",
+        "export_sha256",
+        "original_item_id",
+        "imported_at",
+        "importer"
+      ],
+      "properties": {
+        "source_system": { "$ref": "#/$defs/identifier" },
+        "source_backend": { "$ref": "#/$defs/identifier" },
+        "source_store_id": { "$ref": "#/$defs/identifier" },
+        "export_id": { "$ref": "#/$defs/identifier" },
+        "export_sha256": { "$ref": "#/$defs/sha256" },
+        "original_item_id": { "$ref": "#/$defs/identifier" },
+        "imported_at": { "$ref": "#/$defs/timestamp" },
+        "importer": { "$ref": "#/$defs/producer" }
+      }
+    },
+    "metadata": {
+      "description": "JSON object. Depth 8, 64 keys per object, 256 items per array, 4096 characters per string (enforced by the reader).",
+      "type": "object",
+      "maxProperties": 64
+    },
+    "item_common": {
+      "type": "object",
+      "properties": {
+        "item_id": { "$ref": "#/$defs/identifier" },
+        "content_sha256": {
+          "description": "SHA-256 of the item's text as UTF-8.",
+          "$ref": "#/$defs/sha256"
+        },
+        "metadata": { "$ref": "#/$defs/metadata" },
+        "created_at": {
+          "description": "null when the source never recorded it. Never invented.",
+          "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
+        },
+        "status": { "enum": ["active", "quarantined"] },
+        "provenance": { "oneOf": [{ "$ref": "#/$defs/provenance" }, { "type": "null" }] }
+      },
+      "if": { "properties": { "status": { "const": "quarantined" } } },
+      "then": { "properties": { "provenance": { "$ref": "#/$defs/provenance" } } }
+    },
+    "item": {
+      "oneOf": [
+        {
+          "description": "A retrieval document.",
+          "allOf": [{ "$ref": "#/$defs/item_common" }],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "item_id",
+            "kind",
+            "text",
+            "content_sha256",
+            "metadata",
+            "created_at",
+            "status",
+            "provenance"
+          ],
+          "properties": {
+            "item_id": true,
+            "kind": { "const": "document" },
+            "text": { "type": "string", "minLength": 1, "maxLength": 49152 },
+            "content_sha256": true,
+            "metadata": true,
+            "created_at": true,
+            "status": true,
+            "provenance": true
+          }
+        },
+        {
+          "description": "A conversation message. content_sha256 covers text only.",
+          "allOf": [{ "$ref": "#/$defs/item_common" }],
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "item_id",
+            "kind",
+            "sequence",
+            "role",
+            "name",
+            "text",
+            "tool_calls",
+            "tool_results",
+            "content_sha256",
+            "metadata",
+            "created_at",
+            "status",
+            "provenance"
+          ],
+          "properties": {
+            "item_id": true,
+            "kind": { "const": "message" },
+            "sequence": { "type": "integer", "minimum": 0, "maximum": 99999 },
+            "role": { "enum": ["system", "user", "assistant", "tool"] },
+            "name": {
+              "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }]
+            },
+            "text": { "type": "string", "maxLength": 49152 },
+            "tool_calls": {
+              "type": "array",
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "name", "arguments"],
+                "properties": {
+                  "id": { "$ref": "#/$defs/identifier" },
+                  "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+                  "arguments": { "$ref": "#/$defs/metadata" }
+                }
+              }
+            },
+            "tool_results": {
+              "type": "array",
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["tool_call_id", "name", "content", "is_error"],
+                "properties": {
+                  "tool_call_id": { "$ref": "#/$defs/identifier" },
+                  "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+                  "content": { "type": "string", "maxLength": 49152 },
+                  "is_error": { "type": "boolean" }
+                }
+              }
+            },
+            "content_sha256": true,
+            "metadata": true,
+            "created_at": true,
+            "status": true,
+            "provenance": true
+          }
+        }
+      ]
+    }
+  }
+}
