@@ -97,7 +97,7 @@ Previously published as `openaimeter`; `aimeter-oss` / `ai_meter` is current, wi
 
 ## OpenOntologyLite
 
-**`openontologylite`** · imports as `open_ontology_lite` · CLI `openontology` · range `>=0.2.0b2,<0.3.0`
+**`openontologylite`** · imports as `open_ontology_lite` · CLI `openontology` · range `>=0.2.0b3,<0.3.0`
 
 Portable semantic contracts: typed entities and properties, relationships with cardinality, action contracts with inputs and preconditions, and permissions with risk. Loading is local-only and defensive — safe YAML, duplicate-key rejection, 2 MB file cap, 40 nesting levels, 100,000 node ceiling, and diagnostics that omit raw input values.
 
