@@ -31,7 +31,7 @@ Note that distribution names and import names differ for most components — `pi
 
 ## AgentForge
 
-**`agentforge-oss`** · imports as `forge` · CLI `forge` · range `>=0.5.5,<0.6.0`
+**`agentforge-oss`** · imports as `forge` · CLI `forge` · range `>=0.5.6,<0.6.0`
 
 Async-first multi-agent orchestration. A supervisor decomposes a goal, spawns worker agents that run concurrently in bounded batches, and synthesises the results. Model routing picks between registered models by `cost_optimized`, `quality_first`, `balanced`, or `fixed` strategy. Budgets are enforced twice: a pessimistic pre-flight estimate before a worker batch starts, and a precise check after every model call.
 
@@ -113,7 +113,7 @@ Also defines **AI System Maps**: a declarative record of workload purpose, task 
 
 ## ModelSwapBench
 
-**`modelswapbench`** · imports as `model_swap_bench` · CLI `modelswapbench` · range `>=0.1.0b4,<0.2.0` · extra `[benchmarking]`
+**`modelswapbench`** · imports as `model_swap_bench` · CLI `modelswapbench` · range `>=0.1.0b5,<0.2.0` · extra `[benchmarking]`
 
 Repeatable model portability and replacement benchmarking. Suites are strict YAML or JSON defining model candidates, cases, evaluators, constraints, and replacement rules. Evaluators cover exact and substring matching, regex, JSON parsing and schema, field match, tool selection, policy expectations, citations, latency, cost, and a keyword rubric.
 
@@ -131,7 +131,7 @@ Produces replacement recommendations gated on quality drop, success-rate drop, r
 
 ## PrivateAIStack
 
-**`privateaistack`** · imports as `private_ai_stack` · CLI `privateaistack` · range `>=0.2.0b1,<0.3.0` · extra `[local]`
+**`privateaistack`** · imports as `private_ai_stack` · CLI `privateaistack` · range `>=0.2.0b3,<0.3.0` · extra `[local]`
 
 A local-first FastAPI service and Docker Compose deployment template combining Ollama, Forge orchestration, PostgreSQL-backed document memory, governed static code review, JSONL audit records, and optional OpenTelemetry.
 

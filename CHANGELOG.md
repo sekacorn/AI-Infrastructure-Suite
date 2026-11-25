@@ -8,10 +8,26 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
-**Rubric 2. Exit reports are now `exit-report.v2`.** A consumer that
-validates reports against the v1 schema, or expects exactly eleven vectors,
-must update. The v1 schema stays packaged. The first eleven vectors and their
-scores are unchanged for the same evidence. The next release is 0.2.0b1.
+## [0.2.0b1] - 2026-11-25
+
+A minor release: exit reports gain a twelfth vector, `model_providers`, which
+scores whether a system could leave the model providers it calls. The floors
+for AgentForge, ModelSwapBench and PrivateAIStack rise past security fixes.
+
+**Rubric 2. Exit reports are now `exit-report.v2`.** The v1 report schema
+requires exactly eleven vectors and is closed, so a twelfth row cannot be
+added to it without breaking every v1 validator; v2 is v1 plus the new row and
+a top-level `model_providers` section. What this means for a consumer:
+- A consumer that validates reports against the v1 schema, or expects exactly
+  eleven vectors, must update to v2. The v1 schema stays packaged, so reports
+  already written still validate against it.
+- The first eleven vectors, their order and their scores are unchanged for the
+  same evidence; a test pins this.
+- A manifest that does not declare `model_providers` still gets the row, as
+  `unknown | 100 | unverified`. A rubric-1 report did not assess model
+  providers at all, which means "not assessed", never 0 or 100.
+- The manifest format stays `exit-manifest.v1`. Suite 0.1.0b4 and earlier
+  refuse a manifest that declares the new vector.
 
 ### Added
 - **The `model_providers` vector**, the twelfth. It scores whether the system
@@ -56,6 +72,16 @@ scores are unchanged for the same evidence. The next release is 0.2.0b1.
   agree.
 
 ### Changed
+- **Raised three component floors past security fixes**, in the default
+  dependencies and the `[benchmarking]`, `[local]`, `[observability]` and
+  `[full]` extras as applicable:
+  - `agentforge-oss>=0.5.6,<0.6.0`. 0.5.5 and earlier accepted a token in a
+    URL's query string and logged it at INFO.
+  - `modelswapbench>=0.1.0b5,<0.2.0`. 0.1.0b4 and earlier recorded a token in
+    a `base_url` query string in every run artefact.
+  - `privateaistack>=0.2.0b3,<0.3.0`. 0.2.0b2 and earlier accepted
+    credentials and query-string tokens in `OLLAMA_BASE_URL` and the
+    OpenTelemetry endpoint, which could reach INFO logs.
 - **The documentation and benchmarking ranges are hosted, not local.**
   `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `198.18.0.0/15` and
   `2001:db8::/32`, and their IPv4-mapped forms. Python's `is_private`

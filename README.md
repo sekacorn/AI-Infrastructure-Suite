@@ -6,7 +6,7 @@
 
 It contains **none of the seven projects' business logic**. It installs them, describes them, and diagnoses them. Each component remains independently installable and independently useful.
 
-> **Status:** `0.1.0b4` **Beta release**. The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
+> **Status:** `0.2.0b1` **Beta release**. The seven components it installs have reached Beta, and the suite has passed its own Beta assessment. Version ranges may tighten before 1.0.
 
 > **Independent project.** Linux of AI and AI Infrastructure Suite are independent open-source projects. They are **not affiliated with, endorsed by, or sponsored by the Linux Foundation**. "Linux of AI" is used as a descriptive name for an open, portable infrastructure ecosystem. This package is not an operating system, not a kernel, and not a replacement for either.
 
@@ -140,13 +140,13 @@ ai-suite manifest         # emit the ecosystem manifest as JSON
 ┌──────────────────┬──────────────────┬────────────────────┬────────────────┬──────────────┬─────────────────┬───────────┬──────────┐
 │ Component        │ Distribution     │ Import             │ CLI            │ Layer        │ Supported range │ Installed │ Status   │
 ├──────────────────┼──────────────────┼────────────────────┼────────────────┼──────────────┼─────────────────┼───────────┼──────────┤
-│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.5,<0.6.0  │ 0.5.5     │ ok       │
+│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.6,<0.6.0  │ 0.5.6     │ ok       │
 │ AgentPolicyPack  │ agentpolicypack  │ agent_policy_pack  │ agentpolicy    │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ AIMeter          │ aimeter-oss      │ ai_meter           │ aimeter        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
-│ ModelSwapBench   │ modelswapbench   │ model_swap_bench   │ modelswapbench │ benchmarking │ >=0.1.0b4,<0.2.0│ -         │ optional │
+│ ModelSwapBench   │ modelswapbench   │ model_swap_bench   │ modelswapbench │ benchmarking │ >=0.1.0b5,<0.2.0│ -         │ optional │
 │ OpenOntologyLite │ openontologylite │ open_ontology_lite │ openontology   │ core         │ >=0.2.0b2,<0.3.0│ 0.2.0b2   │ ok       │
-│ PrivateAIStack   │ privateaistack   │ private_ai_stack   │ privateaistack │ local        │ >=0.2.0b1,<0.3.0│ -         │ optional │
+│ PrivateAIStack   │ privateaistack   │ private_ai_stack   │ privateaistack │ local        │ >=0.2.0b3,<0.3.0│ -         │ optional │
 └──────────────────┴──────────────────┴────────────────────┴────────────────┴──────────────┴─────────────────┴───────────┴──────────┘
 ```
 
@@ -267,13 +267,13 @@ Worth knowing about the ecosystem itself, since the suite does not paper over it
 Every component is pinned to a **compatible range**, never an exact version:
 
 ```
-agentforge-oss    >=0.5.5,<0.6.0
+agentforge-oss    >=0.5.6,<0.6.0
 agentpolicypack   >=0.2.0b1,<0.3.0
 aiauditlog        >=0.2.0b1,<0.3.0
 openontologylite  >=0.2.0b2,<0.3.0
 aimeter-oss       >=0.2.0b1,<0.3.0
-modelswapbench    >=0.1.0b4,<0.2.0
-privateaistack    >=0.2.0b1,<0.3.0
+modelswapbench    >=0.1.0b5,<0.2.0
+privateaistack    >=0.2.0b3,<0.3.0
 ```
 
 Three rules govern these:

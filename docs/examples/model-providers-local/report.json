@@ -1,7 +1,7 @@
 {
   "schema_version": "exit-report.v2",
   "rubric_version": "2",
-  "suite_version": "0.1.0b4",
+  "suite_version": "0.2.0b1",
   "manifest_sha256": "956a229eb756ddfbc83b9fd0a32cc6a97c12d13100b3df4b6aac7d4485db2366",
   "vectors": {
     "policies": {
