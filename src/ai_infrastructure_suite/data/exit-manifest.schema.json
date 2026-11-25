@@ -19,7 +19,8 @@
      "tool_connectors",
      "identities",
      "ontology",
-     "contract_terms"
+     "contract_terms",
+     "model_providers"
     ]
    },
    "additionalProperties": {
@@ -77,6 +78,73 @@
      "sha256"
     ],
     "additionalProperties": false
+   },
+   "properties": {
+    "model_providers": {
+     "description": "Rubric 2. Accepts only provider_inventory (a provider-inventory.v1 document, with optional tested_alternatives) or inapplicable. Suite 0.1.0b4 and earlier refuse a manifest that declares this vector.",
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "state",
+      "path",
+      "sha256"
+     ],
+     "properties": {
+      "state": {
+       "enum": [
+        "provider_inventory",
+        "inapplicable"
+       ]
+      },
+      "path": {
+       "type": "string",
+       "maxLength": 240,
+       "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+      },
+      "sha256": {
+       "type": "string",
+       "pattern": "^[0-9a-f]{64}$"
+      },
+      "tested_alternatives": {
+       "description": "model-swap-evidence.v1 documents. Each must bind to exactly one inventory provider and model, and agree with its own numbers, or it is refused. Only with provider_inventory.",
+       "type": "array",
+       "maxItems": 64,
+       "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "path",
+         "sha256"
+        ],
+        "properties": {
+         "path": {
+          "type": "string",
+          "maxLength": 240,
+          "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+         },
+         "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+         }
+        }
+       }
+      }
+     },
+     "if": {
+      "properties": {
+       "state": {
+        "const": "inapplicable"
+       }
+      }
+     },
+     "then": {
+      "not": {
+       "required": [
+        "tested_alternatives"
+       ]
+      }
+     }
+    }
    }
   }
  },

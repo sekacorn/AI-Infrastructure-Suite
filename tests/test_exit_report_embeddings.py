@@ -159,7 +159,7 @@ def test_an_embedding_inventory_is_rejected_on_another_vector(tmp_path: Path) ->
 def test_the_embedding_report_matches_the_packaged_exit_report_schema() -> None:
     schema = json.loads(
         files("ai_infrastructure_suite")
-        .joinpath("data/exit-report.schema.json")
+        .joinpath("data/exit-report.v2.schema.json")
         .read_text(encoding="utf-8")
     )
     report = build_exit_report(EXAMPLE)

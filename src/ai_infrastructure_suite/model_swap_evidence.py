@@ -15,7 +15,8 @@ What this reader does itself:
 - validates the shape, the bounds and the internal consistency of the counts;
 - derives the candidate's hosting from its endpoint origin, with the same
   no-DNS rule used for a provider inventory. A declaration may only add
-  hosted-ness;
+  hosted-ness, and a side declared ``local`` at an endpoint that is not local
+  is refused, as the inventory refuses it;
 - recomputes the decision from the numbers and **refuses** a document whose
   stated verdict disagrees;
 - applies its own, stricter acceptance rule on top (see :func:`assess`).
@@ -147,8 +148,13 @@ class Side:
 
     @property
     def declaration_contradicted(self) -> bool:
-        """Declared local or self-hosted, at an endpoint that is not local."""
-        return self.deployment_declared in {"local", "self_hosted"} and self.hosting == "hosted"
+        """Declared self-hosted, at an endpoint that is not local.
+
+        Legitimate (an operator's own server can sit on a public address), so
+        it is reported, not refused. A side declared ``local`` at such an
+        endpoint never gets this far: the reader refuses it.
+        """
+        return self.deployment_declared == "self_hosted" and self.hosting == "hosted"
 
 
 @dataclass(frozen=True)
@@ -358,14 +364,23 @@ def _side(value: object, label: str) -> Side:
     )
     if origin is not None and kind in FAKE_KINDS:
         raise ModelSwapEvidenceError(f"{label} is a fixture provider and takes no endpoint_origin.")
+    declared = _enum(block["deployment_declared"], DEPLOYMENTS, f"{label} deployment_declared")
+    # The same rule as a provider inventory: whoever owns the server, content
+    # sent to an endpoint that is not local leaves the machine.
+    if (
+        declared == "local"
+        and kind not in FAKE_KINDS
+        and (origin is None or not origin_is_local(origin))
+    ):
+        raise ModelSwapEvidenceError(
+            f"{label} declares local deployment for an endpoint that is not local."
+        )
     return Side(
         alias=_text(block["alias"], f"{label} alias"),
         provider_kind=kind,
         model=_text(block["model"], f"{label} model"),
         endpoint_origin=origin,
-        deployment_declared=_enum(
-            block["deployment_declared"], DEPLOYMENTS, f"{label} deployment_declared"
-        ),
+        deployment_declared=declared,
         summary=_summary(block["summary"], f"{label} summary"),
     )
 

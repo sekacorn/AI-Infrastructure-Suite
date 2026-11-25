@@ -52,6 +52,73 @@ Model availability, any `weights_sha256`, any `license`, and every `deleted_by_p
 | Omitted entry | 100 | Unknown. The score is conservative and the report identifies missing evidence. |
 | inapplicable | N/A | The referenced record explains why the vector does not apply. |
 
+## Model providers (rubric 2)
+
+Rubric 2 adds a twelfth vector, `model_providers`: which model providers the
+system calls, and whether anything else has been shown to take their place.
+The first eleven vectors and their ladders are unchanged. Reports are now
+`exit-report.v2` with `rubric_version: "2"`; the
+[v1 schema](../src/ai_infrastructure_suite/data/exit-report.schema.json) stays
+packaged so earlier reports still validate. **A rubric-1 report did not assess
+model providers.** Read its absence as *not assessed*, never as 0 or 100.
+
+The vector accepts two states only:
+
+- `provider_inventory`, referencing a [`provider-inventory.v1`](provider-inventory.md),
+  with an optional `tested_alternatives` list of up to 64
+  [`model-swap-evidence.v1`](model-swap-evidence.md) documents, each by path
+  and SHA-256;
+- `inapplicable`, referencing a record of why the system calls no model.
+
+Omitted, it is `unknown`, 100, `unverified`, like every other vector. Suite
+0.1.0b4 and earlier refuse a manifest that declares it.
+
+Each tested alternative must bind to exactly one inventory provider and model
+and agree with its own numbers, or the whole report is refused: evidence that
+fits nothing is a mistake to surface, not skip. A side declared `local` at an
+endpoint that is not local is refused, as the inventory refuses it.
+
+Each provider is scored and **the vector takes the worst provider's score**.
+
+| Score | Condition, per provider |
+|---:|---|
+| 0 | Reserved for scanner-verified evidence. **Nothing reaches it in rubric 2**: the suite never runs a model. |
+| 25 | Every model in use has an accepted tested alternative that is local, every feature in use was exercised by one, and no vendor-only feature is in use. **Or** the scanner derives the provider's own endpoint as local: the workload already runs off any vendor, and that the model is open or self-hostable is listed as attested. An SDK default endpoint or a declaration never qualifies. |
+| 50 | One or more of: an accepted alternative for every model, but none is local for some model; a feature in use not exercised by an accepted local alternative (streaming, always); or not every model covered, no vendor-only feature, and an OpenAI-compatible fallback declared. |
+| 75 | A vendor-only feature is in use, with a documented reconstruction path. |
+| 100 | A vendor-only feature with no reconstruction path; or not every model covered and no fallback declared. |
+
+**A 50 always says why.** The provider's `cases` lists `hosted_alternative`,
+`untested_fallback` or `feature_not_exercised`, each that applies, and the
+reason names them in words, including which features.
+
+**Accepted** is the suite's own rule, recomputed from the benchmark's numbers:
+every gate passed, at least 20 samples and the document's own recommended
+minimum, a quality score, and neither side a test fixture. Cost is ignored: a
+dearer alternative still shows the workload can move. Evidence that is not
+accepted is listed with its reasons and moves nothing.
+
+Jurisdiction is shown, always as attested, and never changes a score.
+
+Every operator- or producer-declared input a provider's score rests on is
+listed in that provider's `attested_claims` and in the vector's reason: models
+and features in use, vendor-only features (or that none are), reconstruction
+paths, jurisdiction, a declared fallback, an SDK default endpoint, a local
+model's openness, and every benchmark number. This holds for a `verified
+(benchmark arithmetic)` provider too: the level names what the scanner
+recomputed, and the claims name what it took on trust.
+
+A provider scored from accepted benchmark evidence gets `verified (benchmark
+arithmetic)`; one scored from declarations alone gets `attested`. The vector
+takes the level of the provider that sets its score, and the weaker level on a
+tie. Per-provider and per-document detail is in the report's top-level
+`model_providers` section; the vector table keeps one row per vector.
+
+The [worked example](examples/model-providers/manifest.json) has one provider
+at 25 with a local and a hosted alternative, and one at 75 with a documented
+vendor-only feature, so the vector is 75 and attested. The
+[Ollama-only example](examples/model-providers-local/manifest.json) scores 25.
+
 ## Verification vocabulary
 
 `verification_level` says **which checks the scanner re-ran itself**. No level means the evidence is authentic, that its provenance was established, or that an operator's claim about a vendor is true. A level is a statement about reproducibility and internal consistency, nothing more.
@@ -62,6 +129,7 @@ Model availability, any `weights_sha256`, any `license`, and every `deleted_by_p
 | `verified (fake profiles)` | Rebuilt all three fan-out and three chained deterministic fake profiles in scanner-owned temporary directories, re-ran the content and behavior gates, and compared restored and re-exported assets. | That any real vendor restore ever happened. The profiles are fakes by design. | Restore-tested vectors |
 | `verified (local evidence)` | Hashed every retained source text, checked it against both its declared digest and the digest recorded when the vector was produced, parsed every vector or shard against its own digest, and computed coverage and counts. | The model's availability, weight digest or license, and whether a `deleted_by_policy` record was really deleted under policy. See `attested_claims`. | `embeddings`, as an inventory |
 | `verified (local evidence + fake profiles)` | Both of the two rows above, and the restore it re-ran names this store and commits to this evidence document's exact digest. | The same attested model claims. A drifted profile withholds this level. | `embeddings`, as an inventory |
+| `verified (benchmark arithmetic)` | Derived each endpoint's hosting itself, bound each benchmark document to an inventory provider and model by digest, and recomputed acceptance and feature coverage from the document's numbers. | That any model was run, that a single measurement is real, or that the alternative works in production. | `model_providers` |
 | `attested` | Only that an operator-supplied record exists and its bytes match the declared SHA-256. | Everything the record asserts. A producer string inside a record is not trusted, and contract terms are never more than attested. | Any vector, and `contract_terms` always |
 | `unverified` | Nothing. No evidence was supplied. | Everything. The score is the conservative 100. | Any omitted vector |
 
@@ -71,4 +139,4 @@ The contract-terms vector uses a `contract-terms-checklist.v1` record covering d
 
 Use local, reviewed evidence files under the manifest directory. Keep that directory stable while scanning. The manifest limit is 64 KiB and each referenced file is limited to 4 MiB. Reference a small receipt for a large artifact. Use logical filenames and keep private content, credentials and weights outside Git. Review privacy, license and export permissions before moving data or models.
 
-Exit code 0 means a report was generated, including when evidence is missing. Invalid input, a changed digest or an unreadable file gives exit code 2. The [input](../src/ai_infrastructure_suite/data/exit-manifest.schema.json), [output](../src/ai_infrastructure_suite/data/exit-report.schema.json), [restore summary](../src/ai_infrastructure_suite/data/restore-summary-v1.schema.json), [profile record](../src/ai_infrastructure_suite/data/restore-profile-record-v1.schema.json), and [embedding portability](../src/ai_infrastructure_suite/data/embedding-portability.schema.json) schemas ship with the package.
+Exit code 0 means a report was generated, including when evidence is missing. Invalid input, a changed digest or an unreadable file gives exit code 2. The [input](../src/ai_infrastructure_suite/data/exit-manifest.schema.json), [output](../src/ai_infrastructure_suite/data/exit-report.v2.schema.json) (rubric 1: [v1](../src/ai_infrastructure_suite/data/exit-report.schema.json)), [restore summary](../src/ai_infrastructure_suite/data/restore-summary-v1.schema.json), [profile record](../src/ai_infrastructure_suite/data/restore-profile-record-v1.schema.json), and [embedding portability](../src/ai_infrastructure_suite/data/embedding-portability.schema.json) schemas ship with the package.

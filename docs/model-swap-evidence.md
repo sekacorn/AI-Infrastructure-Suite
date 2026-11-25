@@ -5,8 +5,8 @@ against one candidate, the counts and rates measured, the thresholds the run
 was judged against, and the producer's own verdict. ModelSwapBench writes it
 with `modelswapbench swap-evidence`. It is the evidence that a **tested
 alternative** exists for a model provider, for the coming `model_providers`
-lock-in vector. This release reads, checks and assesses it; nothing feeds it
-into an exit report yet, and no score changes.
+lock-in vector, which scores it: see
+[exit-report.md](exit-report.md#model-providers-rubric-2).
 
 ```python
 from ai_infrastructure_suite.model_swap_evidence import (
@@ -52,9 +52,11 @@ Examples, the ten variants ModelSwapBench's writer emits, are in
   constraint. Cost is not a gate.
 - **Hosting.** Derived from each `endpoint_origin` with the same no-DNS rule
   used for a provider inventory. A declaration may only add hosted-ness. A real
-  provider that states no endpoint is hosted. A candidate declared local or
-  self-hosted at a public host is hosted, and `declaration_contradicted` says
-  so.
+  provider that states no endpoint is hosted.
+- **A side declared `local` at an endpoint that is not local is refused**, as
+  the inventory refuses it: whoever owns the server, the content leaves the
+  machine. Declared `self_hosted` at a public host is legitimate, counted as
+  hosted, and flagged by `declaration_contradicted`.
 
 ## What the suite concludes: `assess`
 

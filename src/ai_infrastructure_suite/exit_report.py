@@ -32,7 +32,11 @@ VECTORS = (
     "identities",
     "ontology",
     "contract_terms",
+    # Rubric 2. Appended, so the first eleven rows keep their order.
+    "model_providers",
 )
+REPORT_SCHEMA_VERSION = "exit-report.v2"
+RUBRIC_VERSION = "2"
 CONTRACT_TERMS = (
     "data_export_rights",
     "fine_tune_adapter_ownership",
@@ -374,6 +378,25 @@ def _embedding_reference(root: Path, entry: object, restore: Any) -> dict[str, A
     return row
 
 
+def _model_providers_row(root: Path, entry: object) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """The model_providers row, and its detail section when there is one.
+
+    Only two states are accepted: a provider inventory, or a documented reason
+    the vector does not apply.
+    """
+    from ai_infrastructure_suite.model_providers import STATES, build_vector
+
+    state = entry.get("state") if isinstance(entry, dict) else None
+    if state not in STATES:
+        raise ValueError("model_providers accepts only provider_inventory or inapplicable.")
+    if state == "inapplicable":
+        if not isinstance(entry, dict) or entry.keys() != {"state", "path", "sha256"}:
+            raise ValueError("An inapplicable model_providers entry takes state, path and sha256.")
+        return _reference(root, entry), None
+    result = build_vector(root, entry)
+    return result.row, result.section
+
+
 def _egress_alerts(rows: list[dict[str, Any]]) -> list[str]:
     """One sentence per record whose rebuild ran external code or sent text out.
 
@@ -412,6 +435,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
     if not isinstance(entries, dict) or entries.keys() - set(VECTORS):
         raise ValueError("Invalid vector inventory.")
     rows: dict[str, dict[str, Any]] = {}
+    model_providers: dict[str, Any] | None = None
     restore_cache: dict[tuple[str, str], Any] = {}
     restore_profiles: dict[tuple[str, str, str, int], dict[str, Any]] = {}
     # Resolve restore summaries before any row is built. The embeddings vector
@@ -444,6 +468,9 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
                 "verification_level": "unverified",
                 "reason": "No evidence supplied.",
             }
+        elif vector == "model_providers":
+            # First, so no other state's branch can score this vector.
+            rows[vector], model_providers = _model_providers_row(manifest.parent, entries[vector])
         elif isinstance(entries[vector], dict) and entries[vector].get("state") == "restore_tested":
             reference = _reference(manifest.parent, entries[vector])
             if not verify_restores:
@@ -507,8 +534,8 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
             if row["verification_level"].startswith("verified"):
                 row["reason"] = f"{row['reason']} {annotation}."
     report: dict[str, Any] = {
-        "schema_version": "exit-report.v1",
-        "rubric_version": "1",
+        "schema_version": REPORT_SCHEMA_VERSION,
+        "rubric_version": RUBRIC_VERSION,
         "suite_version": __version__,
         "manifest_sha256": hashlib.sha256(raw).hexdigest(),
         "vectors": rows,
@@ -527,6 +554,8 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         report["embedding_stores"] = embedding_stores
     if re_embed_records:
         report["re_embed_records"] = re_embed_records
+    if model_providers is not None:
+        report["model_providers"] = model_providers
     return report
 
 
@@ -724,6 +753,8 @@ def render_markdown(report: dict[str, Any]) -> str:
                 f"| {profile['run_kind']} | {profile['profile']} | "
                 f"{profile['hop_index']} | {profile['state']} | {profile['reason']} |"
             )
+    if "model_providers" in report:
+        lines.extend(_model_providers_markdown(report["model_providers"]))
     lines.extend(["", "## Installed components", ""])
     for name, item in report["components"].items():
         version = item["version"] or "absent"
@@ -731,3 +762,55 @@ def render_markdown(report: dict[str, Any]) -> str:
         version = re.sub(r"[^A-Za-z0-9.+!-]", "?", version)[:128]
         lines.append(f"- {name}: {version} ({item['status']})")
     return "\n".join(lines)
+
+
+def _cell(value: object) -> str:
+    """Operator-supplied text, made safe for one Markdown table cell."""
+    text = re.sub(r"[\x00-\x1f\x7f|`]", "?", str(value))
+    return text[:128]
+
+
+def _model_providers_markdown(section: dict[str, Any]) -> list[str]:
+    lines = [
+        "",
+        "## Model providers",
+        "",
+        "Each provider is scored on its own; the vector takes the worst. Hosting is",
+        "derived from each endpoint by this scanner. Models, features, fallbacks,",
+        "jurisdiction and every benchmark number are operator- or producer-attested.",
+        "0 is not reachable in rubric 2: the suite never runs a model.",
+        "",
+        "| Provider | Kind | Hosting | Jurisdiction (attested) | Models covered | "
+        "Lock-in | Verification |",
+        "|---|---|---|---|---:|---:|---|",
+    ]
+    for provider in section["providers"]:
+        lines.append(
+            f"| {provider['provider_id']} | {provider['kind']} | {provider['hosting']} | "
+            f"{provider['jurisdiction']} | "
+            f"{provider['models_with_accepted_alternative']} of {len(provider['models'])} | "
+            f"{provider['score']} | {provider['verification_level']} |"
+        )
+    lines.append("")
+    lines.extend(f"- {provider['reason']}" for provider in section["providers"])
+    if section["tested_alternatives"]:
+        lines.extend(
+            [
+                "",
+                "### Tested alternatives",
+                "",
+                "Acceptance is recomputed here from the producer's numbers, with a floor",
+                "of 20 samples; cost is ignored. That any model ran is attested.",
+                "",
+                "| Evidence | Provider | Model | Candidate | Hosting | Samples | Accepted |",
+                "|---|---|---|---|---|---:|---|",
+            ]
+        )
+        for row in section["tested_alternatives"]:
+            accepted = "yes" if row["accepted"] else "no: " + "; ".join(row["reasons"])
+            lines.append(
+                f"| `{_cell(row['path'])}` | {row['provider_id']} | {_cell(row['model'])} | "
+                f"{row['candidate_provider_kind']}:{_cell(row['candidate_model'])} | "
+                f"{row['candidate_hosting']} | {row['sample_count']} | {accepted} |"
+            )
+    return lines
