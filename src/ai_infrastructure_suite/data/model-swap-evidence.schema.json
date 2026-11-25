@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/AI-Infrastructure-Suite/schemas/model-swap-evidence.v1.json",
+  "title": "model-swap-evidence.v1",
+  "description": "One benchmark comparison of a baseline model against a candidate, as evidence that a tested alternative exists. This is the canonical definition of the format; a producer's own schema may be narrower, never wider. Every number is the producer's attestation. Rules a JSON Schema cannot express are enforced by the reader: that outcome counts do not exceed samples, that quality_score is null exactly when no case executed, that sufficient evidence is not claimed below the stated minimum, that a fixture provider states no endpoint, that the two aliases differ, that a port is in range, and that the stated verdict agrees with a recomputation from the numbers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_by",
+    "run",
+    "baseline",
+    "candidate",
+    "thresholds",
+    "candidate_constraints",
+    "verdict"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "model-swap-evidence.v1"
+    },
+    "generated_by": {
+      "description": "The producer. A label, not proof.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "version"
+      ],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    "run": {
+      "description": "Which stored run the numbers came from.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "manifest_hash",
+        "created_at",
+        "mode",
+        "suite_name",
+        "suite_version"
+      ],
+      "properties": {
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "manifest_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "created_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,6})?(Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "suite_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "suite_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "baseline": {
+      "$ref": "#/$defs/side"
+    },
+    "candidate": {
+      "$ref": "#/$defs/side"
+    },
+    "thresholds": {
+      "description": "The limits the run was judged against.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maximum_quality_drop",
+        "minimum_reliability",
+        "maximum_latency_ms",
+        "minimum_cost_reduction",
+        "hosted_candidates_permitted"
+      ],
+      "properties": {
+        "maximum_quality_drop": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minimum_reliability": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "maximum_latency_ms": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minimum_cost_reduction": {
+          "description": "Recorded for completeness. A portability reader ignores cost.",
+          "type": "number"
+        },
+        "hosted_candidates_permitted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "candidate_constraints": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "passed"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,64}$"
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "verdict": {
+      "description": "The producer's own decision. The reader refuses a document whose verdict disagrees with its numbers.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recommendation",
+        "eligible",
+        "policy_pass",
+        "deployment_compatible"
+      ],
+      "properties": {
+        "recommendation": {
+          "enum": [
+            "recommended replacement",
+            "recommended with conditions",
+            "suitable as first-stage model with escalation",
+            "not recommended",
+            "insufficient evidence"
+          ]
+        },
+        "eligible": {
+          "type": "boolean"
+        },
+        "policy_pass": {
+          "type": "boolean"
+        },
+        "deployment_compatible": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "summary": {
+      "description": "Counts and rates for one model. Cases counted in none of the four outcomes were skipped.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sample_count",
+        "success_count",
+        "failure_count",
+        "error_count",
+        "timeout_count",
+        "quality_score",
+        "tool_accuracy",
+        "policy_pass_rate",
+        "p95_latency_ms",
+        "evidence_sufficient",
+        "minimum_recommended_sample_size"
+      ],
+      "properties": {
+        "sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "success_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failure_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timeout_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quality_score": {
+          "description": "Null exactly when no case executed.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tool_accuracy": {
+          "description": "Null when no case exercised tool selection. Never a pass.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_pass_rate": {
+          "description": "Null when no policy evidence was collected. Never a pass.",
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "p95_latency_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "evidence_sufficient": {
+          "type": "boolean"
+        },
+        "minimum_recommended_sample_size": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "side": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alias",
+        "provider_kind",
+        "model",
+        "endpoint_origin",
+        "deployment_declared",
+        "summary"
+      ],
+      "properties": {
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "provider_kind": {
+          "enum": [
+            "deterministic",
+            "ollama",
+            "forge",
+            "openai_compatible",
+            "openai",
+            "anthropic",
+            "bedrock"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "endpoint_origin": {
+          "description": "Scheme, host and optional port only. Null when the provider states no endpoint of its own.",
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 256,
+              "pattern": "^https?://(\\[[0-9a-f:.]+\\]|[a-z0-9.-]+)(:[0-9]{1,5})?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "deployment_declared": {
+          "enum": [
+            "local",
+            "self_hosted",
+            "hosted",
+            "test"
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/summary"
+        }
+      }
+    }
+  }
+}

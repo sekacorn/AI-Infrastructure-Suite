@@ -327,6 +327,7 @@ The diagnostics are built to be safe to run and safe to paste into an issue:
 - [docs/release-policy.md](docs/release-policy.md) — version ranges and release process
 - [docs/re-embed-record.md](docs/re-embed-record.md) — the re-embed record format and its quality block
 - [docs/provider-inventory.md](docs/provider-inventory.md) — the provider inventory format, read for the coming `model_providers` vector
+- [docs/model-swap-evidence.md](docs/model-swap-evidence.md) — benchmark evidence of a tested alternative, and how its verdict is recomputed
 - [docs/security.md](docs/security.md) — threat model and output guarantees
 
 ---
