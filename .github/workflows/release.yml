@@ -178,19 +178,45 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Wait for the exact version to appear on PyPI
+      - name: Wait until pip itself can see the exact version
+        # The JSON API updates as soon as the upload lands, but pip reads the
+        # simple index, which a CDN serves from cache for up to ten minutes.
+        # Waiting on the JSON API once let pip be handed a stale index that
+        # ended at the previous release, and the wheel install failed. So the
+        # wait asks pip: the wheel must download through pip's own index, and
+        # the simple index, fetched the way pip fetches it, must list the sdist.
         run: |
           set -euo pipefail
           version="${{ needs.build.outputs.version }}"
-          for attempt in $(seq 1 30); do
-            if curl -sf "https://pypi.org/pypi/$EXPECTED_DISTRIBUTION/$version/json" > /dev/null; then
-              echo "$EXPECTED_DISTRIBUTION $version is available on PyPI"
+          python -m venv /tmp/probeenv
+          for attempt in $(seq 1 40); do
+            rm -rf /tmp/probe
+            if /tmp/probeenv/bin/pip download --quiet --no-deps --no-cache-dir \
+                 --only-binary :all: --dest /tmp/probe \
+                 "$EXPECTED_DISTRIBUTION==$version" 2>/dev/null \
+               && python - "$EXPECTED_DISTRIBUTION" "$version" <<'PY'
+          import json, sys, urllib.request
+          name, version = sys.argv[1], sys.argv[2]
+          request = urllib.request.Request(
+              f"https://pypi.org/simple/{name}/",
+              headers={
+                  "Accept": "application/vnd.pypi.simple.v1+json",
+                  "Cache-Control": "max-age=0",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
+              files = {f["filename"] for f in json.load(response)["files"]}
+          stem = name.replace("-", "_")
+          sys.exit(0 if f"{stem}-{version}.tar.gz" in files else 1)
+          PY
+            then
+              echo "pip sees $EXPECTED_DISTRIBUTION $version (wheel and sdist)"
               exit 0
             fi
-            echo "attempt $attempt: not yet visible, waiting"
-            sleep 10
+            echo "attempt $attempt: pip does not see $version yet, waiting"
+            sleep 15
           done
-          echo "::error::$EXPECTED_DISTRIBUTION $version did not appear on PyPI"
+          echo "::error::pip could not see $EXPECTED_DISTRIBUTION $version after 10 minutes"
           exit 1
 
       - name: Install the published wheel in a clean environment
