@@ -1,0 +1,67 @@
+{
+  "schema_version": "embedding-portability.v1",
+  "stores": [
+    {
+      "store_id": "kb-memory",
+      "embedding_model": {
+        "id": "example-embed-small",
+        "revision": "2026-02-01",
+        "dimensions": 8,
+        "availability": "open_weight_self_hostable",
+        "availability_verification": "attested"
+      },
+      "vectors": {
+        "layout": "sharded_jsonl",
+        "shards": [
+          {
+            "path": "vectors/0000.jsonl",
+            "sha256": "2304bd92bdba1966694f4acba3e51e281e8a8c691248d3d2ad4351368bdac8f8",
+            "record_count": 5
+          }
+        ],
+        "source_text": [
+          {
+            "record_id": "kb-0001",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/kb-0001.txt",
+              "sha256": "6ac613b764779d7a2c0792b5f4e8de671ade047df6336b7c538da172e70654c0"
+            }
+          },
+          {
+            "record_id": "kb-0002",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/kb-0002.txt",
+              "sha256": "9cc5611a4012978f3cbba99f78b4921fb6213d3c911241108917ba806522c688"
+            }
+          },
+          {
+            "record_id": "kb-0003",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/kb-0003.txt",
+              "sha256": "3d5e757cd05ea871c15b266d7faff73c17bb2331d9667a4c45cd4d09303ca919"
+            }
+          },
+          {
+            "record_id": "kb-0004",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/kb-0004.txt",
+              "sha256": "0d2089de1b7add18e8f4d553a6a724a2c823c102f9b89c6329d78cab53303172"
+            }
+          },
+          {
+            "record_id": "kb-0005",
+            "source_text": {
+              "status": "retained",
+              "path": "sources/kb-0005.txt",
+              "sha256": "940d76852bb37e1fe4a78923cdf08b92de08cd5a1d2bc89df3ca84c204634c22"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

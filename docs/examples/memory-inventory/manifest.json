@@ -1,0 +1,14 @@
+{
+  "schema_version": "exit-manifest.v1",
+  "vectors": {
+    "memory": {
+      "state": "memory_inventory",
+      "path": "export/agent-memory.json",
+      "sha256": "7e04cc8c89bcda52dcaecdec0b5a6139f11994ab500ed5b2c88c5f28ea0ef69a",
+      "import_report": {
+        "path": "import-report.json",
+        "sha256": "614aa870bcd86d5715e832f6b07a78e2ffe0d07d1657820128e06e77a1952b95"
+      }
+    }
+  }
+}

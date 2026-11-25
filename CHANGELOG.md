@@ -9,6 +9,24 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 ## [Unreleased]
 
 ### Added
+- **The `memory` vector scores `memory_inventory`** (Phase 4a, checkpoint 2):
+  an `agent-memory.v1` export, optionally with the `agent-memory-import.v1` a
+  destination wrote when it imported it. The scanner follows each store's
+  link into its `embedding-portability.v1` inventory and requires every item's
+  vector to have been built from exactly that item's text; it binds an import
+  report to the export by digest. Per store: 25 with full vector coverage and a
+  bound import report that refused nothing, otherwise 50, with the reason
+  naming what is missing. **Never 0.** New level `verified (memory export)`,
+  new optional report section `memory_stores`, worked example in
+  `docs/examples/memory-inventory/`. The manifest's `memory` entry and the
+  report's `memory` row each gain a variant; a report without
+  `memory_inventory` still validates against 0.2.0b2's schema, which a test
+  pins against a copy of it.
+- **`agent-memory-import.v1`**, a packaged JSON Schema and a bounded reader.
+- `agent-memory.v1` items are round-tripped canonically, and each store
+  reports a layout-independent `canonical_sha256`.
+- `embedding-portability.v1` scans expose the source digest recorded with each
+  vector (`StoreResult.recorded_source_sha256`), additively.
 - **`agent-memory.v1`**, a portable format for an agent's memory (Phase 4a,
   checkpoint 1), with a packaged JSON Schema, six example exports and a
   bounded reader in `ai_infrastructure_suite.agent_memory`. Retrieval documents

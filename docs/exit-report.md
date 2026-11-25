@@ -119,6 +119,42 @@ at 25 with a local and a hosted alternative, and one at 75 with a documented
 vendor-only feature, so the vector is 75 and attested. The
 [Ollama-only example](examples/model-providers-local/manifest.json) scores 25.
 
+## Memory inventories
+
+The `memory` vector may declare `state: memory_inventory`, referencing an
+[`agent-memory.v1`](agent-memory.md) export by path and SHA-256, and optionally
+an `import_report`: the `agent-memory-import.v1` a destination wrote when it
+imported that export. Suite 0.2.0b2 and earlier refuse this state; a report
+that does not use it still validates against 0.2.0b2's schema.
+
+**The scanner re-runs:** the export's digest and every shard's; every item's
+text against its `content_sha256`; ordering, uniqueness, counts and tombstones;
+a lossless canonical round trip of every item; for a store that links an
+`embedding-portability.v1` inventory, that the inventory verifies at its own
+digest, names the store, and recorded for each item a vector built from exactly
+that item's text; and, when an import report is supplied, that it is bound to
+this export's digest and ID, covers exactly its stores, and accounts for every
+item and tombstone.
+
+**Attested, listed in `attested_claims`:** that the export holds every item;
+that policy deletions happened; that the redaction profile was adequate (when
+one was applied; otherwise the reason says none was); `created_at` values;
+provenance of imported items; that the import ran at the destination; and the
+linked embedding model's declarations.
+
+| Per store | Score |
+|---|---:|
+| Verified export, every item bound to its vector (when vectors are linked), and a bound import report that refused nothing | 25 |
+| Verified export otherwise; the reason names what is missing | 50 |
+| Invalid evidence (a digest, count or binding fails) | refused, exit code 2 |
+
+The worst store sets the vector. **Nothing reaches 0**: the scanner never
+restores memory, and 0 is never given on attested evidence. An item whose
+vector was built from different text is invalid evidence, not a lower score.
+A vector kept for a tombstoned item, or with no item at all, is reported as an
+unscored finding. Per-store detail is in the report's `memory_stores` section.
+The [worked example](examples/memory-inventory/manifest.json) scores 25.
+
 ## Verification vocabulary
 
 `verification_level` says **which checks the scanner re-ran itself**. No level means the evidence is authentic, that its provenance was established, or that an operator's claim about a vendor is true. A level is a statement about reproducibility and internal consistency, nothing more.
@@ -130,6 +166,7 @@ vendor-only feature, so the vector is 75 and attested. The
 | `verified (local evidence)` | Hashed every retained source text, checked it against both its declared digest and the digest recorded when the vector was produced, parsed every vector or shard against its own digest, and computed coverage and counts. | The model's availability, weight digest or license, and whether a `deleted_by_policy` record was really deleted under policy. See `attested_claims`. | `embeddings`, as an inventory |
 | `verified (local evidence + fake profiles)` | Both of the two rows above, and the restore it re-ran names this store and commits to this evidence document's exact digest. | The same attested model claims. A drifted profile withholds this level. | `embeddings`, as an inventory |
 | `verified (benchmark arithmetic)` | Derived each endpoint's hosting itself, bound each benchmark document to an inventory provider and model by digest, and recomputed acceptance and feature coverage from the document's numbers. | That any model was run, that a single measurement is real, or that the alternative works in production. | `model_providers` |
+| `verified (memory export)` | Read the agent-memory export and every shard against their digests, re-hashed every item, round-tripped every item canonically, checked counts and tombstones, bound items to linked vectors by digest, and bound any import report to this export. | That the export is complete, that deletions happened, that redaction was adequate, or that any import ran. See `attested_claims`. | `memory`, as an inventory |
 | `attested` | Only that an operator-supplied record exists and its bytes match the declared SHA-256. | Everything the record asserts. A producer string inside a record is not trusted, and contract terms are never more than attested. | Any vector, and `contract_terms` always |
 | `unverified` | Nothing. No evidence was supplied. | Everything. The score is the conservative 100. | Any omitted vector |
 

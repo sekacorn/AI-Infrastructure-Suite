@@ -2,8 +2,9 @@
 
 An agent-memory document is a portable export of an agent's memory: retrieval
 documents or a conversation transcript, tombstones for items deleted under
-policy, and provenance for items that arrived by import. It is the evidence the
-`memory` vector will score; this release only reads and validates it.
+policy, and provenance for items that arrived by import. The `memory` vector
+scores it as `memory_inventory`: see
+[exit-report.md](exit-report.md#memory-inventories).
 
 ```python
 from ai_infrastructure_suite.agent_memory import load_agent_memory
@@ -39,7 +40,18 @@ A store with embeddings references an
 path and SHA-256. Each item's `item_id` is a `record_id` there, and the
 inventory's recorded source-text digest equals the item's `content_sha256`, so
 every vector is bound to the exact memory text it came from. One vector format,
-reused. This reader parses the reference; following it is part of scoring.
+reused. Scoring follows the reference and refuses an item whose vector was
+built from different text.
+
+## The import report
+
+`agent-memory-import.v1` is what a destination writes after importing one
+export: the import ID and time, the destination system and backend kind
+(never a locator), the source export's ID and SHA-256, and per store how many
+items it received, imported, found unchanged or refused, and how many
+tombstones it applied. `received` must equal `imported + unchanged + refused`.
+Scoring binds it to the export by digest and ID; that the import ran stays
+attested. Schema: `ai_infrastructure_suite/data/agent-memory-import.schema.json`.
 
 ## Deletion
 

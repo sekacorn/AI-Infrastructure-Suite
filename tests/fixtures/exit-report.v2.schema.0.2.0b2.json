@@ -1,0 +1,1356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/AI-Infrastructure-Suite/schemas/exit-report.v2.json",
+  "title": "exit-report.v2",
+  "description": "Rubric 2: the eleven rubric-1 vectors, unchanged, plus model_providers. exit-report.v1 remains packaged so reports written before rubric 2 still validate. A rubric-1 report did not assess model providers: that means not assessed, never 0 or 100.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "exit-report.v2"
+    },
+    "rubric_version": {
+      "const": "2"
+    },
+    "suite_version": {
+      "type": "string"
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "vectors": {
+      "type": "object",
+      "required": [
+        "policies",
+        "prompts",
+        "embeddings",
+        "fine_tunes",
+        "memory",
+        "audit_history",
+        "cost_history",
+        "tool_connectors",
+        "identities",
+        "ontology",
+        "contract_terms",
+        "model_providers"
+      ],
+      "propertyNames": {
+        "enum": [
+          "policies",
+          "prompts",
+          "embeddings",
+          "fine_tunes",
+          "memory",
+          "audit_history",
+          "cost_history",
+          "tool_connectors",
+          "identities",
+          "ontology",
+          "contract_terms",
+          "model_providers"
+        ]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/vector"
+      },
+      "properties": {
+        "model_providers": {
+          "$ref": "#/$defs/model_providers_vector"
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "restore_profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/restore_profile"
+      }
+    },
+    "legal_notice": {
+      "const": "Contract terms are operator-attested. This report is not legal advice."
+    },
+    "embedding_stores": {
+      "description": "Per-store detail for the embedding inventory, one entry per scanned vector store.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/embedding_store"
+      }
+    },
+    "re_embed_records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/re_embed_record"
+      }
+    },
+    "model_providers": {
+      "description": "Per-provider detail for the model_providers vector. Present only when an inventory was supplied.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inventory",
+        "governing_provider",
+        "providers",
+        "tested_alternatives",
+        "attested_claims"
+      ],
+      "properties": {
+        "inventory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "generated_by_tool",
+            "generated_by_version",
+            "generated_by_verification"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "maxLength": 240,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "generated_by_tool": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "generated_by_version": {
+              "type": "string",
+              "maxLength": 256
+            },
+            "generated_by_verification": {
+              "const": "attested"
+            }
+          }
+        },
+        "governing_provider": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{1,64}$"
+        },
+        "providers": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/model_provider"
+          }
+        },
+        "tested_alternatives": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/tested_alternative"
+          }
+        },
+        "attested_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "rubric_version",
+    "suite_version",
+    "manifest_sha256",
+    "vectors",
+    "components",
+    "legal_notice"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "restore_profile": {
+      "type": "object",
+      "properties": {
+        "evidence_path": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "run_kind": {
+          "enum": [
+            "fanout",
+            "chain"
+          ]
+        },
+        "profile": {
+          "enum": [
+            "mock-azure",
+            "mock-aws",
+            "local-ollama"
+          ]
+        },
+        "hop_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "state": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidence_path",
+        "run_kind",
+        "profile",
+        "hop_index",
+        "state",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "vector": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "const": "unknown"
+            },
+            "score": {
+              "const": 100
+            },
+            "verification_level": {
+              "const": "unverified"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "state",
+            "score",
+            "verification_level",
+            "reason"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "enum": [
+                "restore_tested",
+                "restore_failed",
+                "importer_validated",
+                "exported",
+                "reconstruction",
+                "non_exportable",
+                "inapplicable",
+                "attested",
+                "embedding_inventory"
+              ]
+            },
+            "score": {
+              "enum": [
+                0,
+                25,
+                50,
+                75,
+                100,
+                null
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "verification_level": {
+              "enum": [
+                "verified",
+                "verified (fake profiles)",
+                "attested",
+                "verified (local evidence)",
+                "verified (local evidence + fake profiles)"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 240,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "re_embeddable": {
+              "description": "Aggregate embedding result. Present only for an embedding inventory.",
+              "enum": [
+                "yes",
+                "no",
+                "partial",
+                "not_applicable"
+              ]
+            },
+            "attested_claims": {
+              "description": "What the scanner did not re-run. Present only for an embedding inventory.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "enum": [
+                  "model availability",
+                  "model weights digest",
+                  "model license",
+                  "policy deletions"
+                ]
+              }
+            }
+          },
+          "required": [
+            "state",
+            "score",
+            "reason",
+            "verification_level",
+            "path",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "restore_tested"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 0
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "restore_failed"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 100
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "importer_validated"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 25
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "exported"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 50
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "reconstruction"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 75
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "non_exportable"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": 100
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "inapplicable"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "score": {
+                    "const": null
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "state": {
+                    "const": "embedding_inventory"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              },
+              "then": {
+                "required": [
+                  "re_embeddable",
+                  "attested_claims"
+                ]
+              },
+              "else": {
+                "properties": {
+                  "re_embeddable": false,
+                  "attested_claims": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "embedding_store": {
+      "type": "object",
+      "required": [
+        "store_id",
+        "model_id",
+        "model_revision",
+        "dimensions",
+        "availability",
+        "availability_verification",
+        "layout",
+        "shard_count",
+        "vector_count",
+        "retained",
+        "missing",
+        "deleted_by_policy",
+        "deleted_by_policy_verification",
+        "coverage_pct",
+        "restore_link",
+        "re_embeddable",
+        "score",
+        "reason",
+        "warnings",
+        "findings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "model_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "dimensions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "availability": {
+          "enum": [
+            "open_weight_self_hostable",
+            "vendor_only"
+          ]
+        },
+        "availability_verification": {
+          "const": "attested"
+        },
+        "weights_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "weights_verification": {
+          "const": "attested"
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "license_verification": {
+          "const": "attested"
+        },
+        "layout": {
+          "enum": [
+            "single_file",
+            "sharded_jsonl"
+          ]
+        },
+        "shard_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "vector_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "retained": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missing": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted_by_policy": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deleted_by_policy_verification": {
+          "const": "attested"
+        },
+        "coverage_pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "restore_link": {
+          "enum": [
+            "verified",
+            "absent",
+            "unverified",
+            "store_id_matched_digest_mismatch"
+          ]
+        },
+        "re_embeddable": {
+          "enum": [
+            "yes",
+            "no",
+            "partial",
+            "not_applicable"
+          ]
+        },
+        "score": {
+          "enum": [
+            0,
+            25,
+            50,
+            75,
+            100,
+            null
+          ]
+        },
+        "reason": {
+          "type": "string"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "record_count",
+              "record_ids",
+              "record_ids_truncated"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "const": "vector retained after source deletion"
+              },
+              "record_count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "record_ids": {
+                "type": "array",
+                "maxItems": 20,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "record_ids_truncated": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "re_embed_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "source_store_id",
+        "target_store_id",
+        "target_model",
+        "target_dimensions",
+        "availability",
+        "availability_verification",
+        "verification_level",
+        "rebuild_reproduced",
+        "reproduction_sample_size",
+        "anchor_selection",
+        "anchor_seed_was_declared_not_derived",
+        "score_effect",
+        "quality_status",
+        "coverage_complete",
+        "attested_claims",
+        "reason",
+        "egress"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "target_store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "target_model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "target_dimensions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "availability": {
+          "enum": [
+            "open_weight_self_hostable",
+            "vendor_only"
+          ]
+        },
+        "availability_verification": {
+          "const": "attested"
+        },
+        "verification_level": {
+          "enum": [
+            "attested",
+            "verified (re-embedded, quality sampled)",
+            "verified (re-embedded, quality below threshold)",
+            "verified (re-embedded, quality unjudged)",
+            "verified (re-embedded, quality not measured)"
+          ]
+        },
+        "rebuild_reproduced": {
+          "type": "boolean"
+        },
+        "reproduction_sample_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "anchor_selection": {
+          "enum": [
+            "operator",
+            "seeded_random"
+          ]
+        },
+        "anchor_seed_was_declared_not_derived": {
+          "type": "boolean"
+        },
+        "score_effect": {
+          "enum": [
+            "50_to_25",
+            "none"
+          ]
+        },
+        "quality_status": {
+          "enum": [
+            "sampled",
+            "below_threshold",
+            "unjudged",
+            "not_measured"
+          ]
+        },
+        "coverage_complete": {
+          "type": "boolean"
+        },
+        "attested_claims": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "maxItems": 64
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "egress": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "executor_kind",
+            "execution_verification",
+            "hosting_mode",
+            "external_execution_confirmed",
+            "hosted_execution_confirmed",
+            "records_submitted_to_external_executor",
+            "transmission_basis",
+            "delivery_verification",
+            "delivery_established",
+            "executor_id",
+            "endpoint_origin",
+            "dataset_privacy_classification",
+            "warnings"
+          ],
+          "properties": {
+            "executor_kind": {
+              "enum": [
+                "local_builtin",
+                "external_unverified",
+                "not stated"
+              ]
+            },
+            "execution_verification": {
+              "enum": [
+                "registry_owned",
+                "attested",
+                "not stated"
+              ]
+            },
+            "hosting_mode": {
+              "enum": [
+                "local",
+                "hosted",
+                "not stated"
+              ]
+            },
+            "external_execution_confirmed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "hosted_execution_confirmed": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "records_submitted_to_external_executor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "transmission_basis": {
+              "enum": [
+                "handed_to_executor",
+                "no_transmission",
+                "not stated"
+              ]
+            },
+            "delivery_verification": {
+              "enum": [
+                "unverified",
+                "not stated"
+              ]
+            },
+            "delivery_established": {
+              "type": "boolean"
+            },
+            "executor_id": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 512
+            },
+            "endpoint_origin": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 512
+            },
+            "dataset_privacy_classification": {
+              "enum": [
+                "public",
+                "internal",
+                "confidential",
+                "restricted",
+                "unknown",
+                null
+              ]
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "maxItems": 64
+            }
+          }
+        },
+        "metric_basis": {
+          "enum": [
+            "neighborhood_agreement",
+            "retrieval_relevance",
+            "not stated"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "record_anchored",
+            "text",
+            "not stated"
+          ]
+        },
+        "measures_user_search_quality": {
+          "type": "boolean"
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "threshold_summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "query_set_size": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "top_k": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "dependentRequired": {
+        "metric_basis": [
+          "mode",
+          "measures_user_search_quality",
+          "thresholds",
+          "threshold_summary",
+          "metrics",
+          "query_set_size",
+          "top_k"
+        ]
+      }
+    },
+    "model_providers_vector": {
+      "description": "The model_providers row. Only provider_inventory or inapplicable is accepted; a missing vector is unknown at 100. Nothing reaches 0 in rubric 2.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/vector/oneOf/0"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "score",
+            "verification_level",
+            "reason",
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "state": {
+              "const": "inapplicable"
+            },
+            "score": {
+              "const": null
+            },
+            "verification_level": {
+              "const": "attested"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 240,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "score",
+            "verification_level",
+            "reason",
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "state": {
+              "const": "provider_inventory"
+            },
+            "score": {
+              "enum": [
+                25,
+                50,
+                75,
+                100
+              ]
+            },
+            "verification_level": {
+              "enum": [
+                "verified (benchmark arithmetic)",
+                "attested"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 240,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      ]
+    },
+    "model_provider": {
+      "description": "One provider on the rubric-2 ladder. A 50 always lists its cases; no other score has any.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "kind",
+        "endpoint_origin",
+        "hosting",
+        "hosting_verification",
+        "jurisdiction",
+        "jurisdiction_verification",
+        "models",
+        "models_with_accepted_alternative",
+        "tested_alternatives",
+        "openai_compatible_fallback",
+        "tool_calling",
+        "streaming",
+        "vendor_only_features",
+        "score",
+        "verification_level",
+        "cases",
+        "features_not_exercised",
+        "reason",
+        "attested_claims"
+      ],
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{1,64}$"
+        },
+        "kind": {
+          "enum": [
+            "openai",
+            "openai_compatible",
+            "anthropic",
+            "bedrock",
+            "ollama",
+            "echo",
+            "other"
+          ]
+        },
+        "endpoint_origin": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 256,
+              "pattern": "^https?://(\\[[0-9a-f:.]+\\]|[a-z0-9.-]+)(:[0-9]{1,5})?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hosting": {
+          "enum": [
+            "local",
+            "hosted"
+          ]
+        },
+        "hosting_verification": {
+          "enum": [
+            "derived",
+            "sdk_default",
+            "offline"
+          ]
+        },
+        "jurisdiction": {
+          "type": "string",
+          "pattern": "^([A-Z]{2}|unknown|not_applicable)$"
+        },
+        "jurisdiction_verification": {
+          "const": "attested"
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "models_with_accepted_alternative": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "tested_alternatives": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "openai_compatible_fallback": {
+          "type": "boolean"
+        },
+        "tool_calling": {
+          "type": "boolean"
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "vendor_only_features": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "feature",
+              "reconstruction"
+            ],
+            "properties": {
+              "feature": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]{1,64}$"
+              },
+              "reconstruction": {
+                "enum": [
+                  "documented",
+                  "none"
+                ]
+              }
+            }
+          }
+        },
+        "score": {
+          "enum": [
+            25,
+            50,
+            75,
+            100
+          ]
+        },
+        "verification_level": {
+          "enum": [
+            "verified (benchmark arithmetic)",
+            "attested"
+          ]
+        },
+        "cases": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "hosted_alternative",
+              "untested_fallback",
+              "feature_not_exercised"
+            ]
+          }
+        },
+        "features_not_exercised": {
+          "type": "array",
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "tool_calling",
+              "streaming"
+            ]
+          }
+        },
+        "reason": {
+          "type": "string"
+        },
+        "attested_claims": {
+          "description": "Every operator- or producer-declared input this provider's score rests on.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "score": {
+                "const": 50
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "cases": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "score": {
+                "not": {
+                  "const": 50
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "cases": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tested_alternative": {
+      "description": "One model-swap-evidence.v1 document, bound to exactly one inventory provider and model.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "provider_id",
+        "model",
+        "candidate_provider_kind",
+        "candidate_model",
+        "candidate_endpoint_origin",
+        "candidate_hosting",
+        "candidate_declaration_contradicted",
+        "producer_recommendation",
+        "accepted",
+        "reasons",
+        "sample_count",
+        "tool_calling_exercised",
+        "verification_level",
+        "attested_claims"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "maxLength": 240,
+          "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "provider_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{1,64}$"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "candidate_provider_kind": {
+          "enum": [
+            "deterministic",
+            "ollama",
+            "forge",
+            "openai_compatible",
+            "openai",
+            "anthropic",
+            "bedrock"
+          ]
+        },
+        "candidate_model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "candidate_endpoint_origin": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 256,
+              "pattern": "^https?://(\\[[0-9a-f:.]+\\]|[a-z0-9.-]+)(:[0-9]{1,5})?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "candidate_hosting": {
+          "enum": [
+            "local",
+            "hosted",
+            "fake"
+          ]
+        },
+        "candidate_declaration_contradicted": {
+          "type": "boolean"
+        },
+        "producer_recommendation": {
+          "enum": [
+            "recommended replacement",
+            "recommended with conditions",
+            "suitable as first-stage model with escalation",
+            "not recommended",
+            "insufficient evidence"
+          ]
+        },
+        "accepted": {
+          "type": "boolean"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tool_calling_exercised": {
+          "type": "boolean"
+        },
+        "verification_level": {
+          "const": "verified (benchmark arithmetic)"
+        },
+        "attested_claims": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,8 +2,9 @@
 
 An agent-memory document is a portable export of an agent's memory: retrieval
 documents or a conversation transcript, tombstones for items deleted under
-policy, and provenance for items that arrived by import. This module only reads
-and validates it; scoring the ``memory`` vector is a later checkpoint.
+policy, and provenance for items that arrived by import. This module reads and
+validates it, and the ``agent-memory-import.v1`` report a destination writes;
+``memory_vector`` scores them.
 
 What the reader checks itself, over the bytes it was given:
 
@@ -18,7 +19,7 @@ What the reader checks itself, over the bytes it was given:
 
 Vectors are never stored here. A store with embeddings references an
 ``embedding-portability.v1`` document; this module parses that reference and
-does not follow it.
+``memory_vector`` follows it.
 
 This module never opens a socket. Error messages never repeat a value from the
 document, because memory holds user data.
@@ -27,6 +28,7 @@ document, because memory holds user data.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -41,6 +43,8 @@ from ai_infrastructure_suite._evidence import (
 )
 
 SCHEMA_VERSION: Final = "agent-memory.v1"
+IMPORT_SCHEMA_VERSION: Final = "agent-memory-import.v1"
+MAX_IMPORT_REPORT_BYTES: Final = 256 * 1024
 
 MAX_DOCUMENT_BYTES: Final = 4 * 1024 * 1024
 MAX_SHARD_BYTES: Final = 16 * 1024 * 1024
@@ -118,6 +122,10 @@ class MemoryStoreSummary:
     tombstone_ids: frozenset[str]
     #: Items carrying provenance, i.e. that arrived by import.
     imported: int
+    #: SHA-256 over every item re-serialized canonically (sorted keys, compact),
+    #: one per line, in store order. Independent of layout and formatting, so two
+    #: exports of the same memory have the same value however they are sharded.
+    canonical_sha256: str
 
     @property
     def item_count(self) -> int:
@@ -314,6 +322,7 @@ class _Tally:
 
     def __post_init__(self) -> None:
         self.digests: dict[str, str] = {}
+        self.canonical = hashlib.sha256()
 
 
 def _item(raw: object, tally: _Tally) -> None:
@@ -361,6 +370,13 @@ def _item(raw: object, tally: _Tally) -> None:
         if tally.last_key is not None and not str(tally.last_key) < item_id:
             raise _fail("Retrieval items must be sorted by item_id.")
         order_key = item_id
+
+    # Round trip: the item re-serialized canonically must parse back to exactly
+    # what was read, so nothing in it depends on the writer's formatting.
+    canonical = json.dumps(item, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    if json.loads(canonical) != item:
+        raise _fail("An item does not survive a canonical round trip.")
+    tally.canonical.update(canonical.encode("utf-8") + b"\n")
 
     tally.last_key = order_key
     tally.digests[item_id] = declared
@@ -504,6 +520,7 @@ def _store(raw: object, root: Path) -> MemoryStoreSummary:
         content_digests=dict(tally.digests),
         tombstone_ids=tombstone_ids,
         imported=tally.imported,
+        canonical_sha256=tally.canonical.hexdigest(),
     )
 
 
@@ -573,3 +590,120 @@ def load_agent_memory(path: Path, *, expected_sha256: str | None = None) -> Agen
     if expected_sha256 is not None and hashlib.sha256(data).hexdigest() != expected_sha256:
         raise _fail("Agent memory document differs from its declared SHA-256.")
     return parse_agent_memory(data, path.absolute().parent)
+
+
+# --- agent-memory-import.v1 --------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class StoreImport:
+    """What a destination did with one store of the export."""
+
+    source_store_id: str
+    destination_store_id: str
+    received: int
+    imported: int
+    unchanged: int
+    refused: int
+    tombstones_applied: int
+
+
+@dataclass(frozen=True)
+class MemoryImportReport:
+    """A validated import report. That the import ran is the importer's statement."""
+
+    document_sha256: str
+    generated_by_tool: str
+    generated_by_version: str
+    import_id: str
+    imported_at: str
+    destination_system: str
+    destination_backend: str
+    source_export_id: str
+    source_export_sha256: str
+    stores: tuple[StoreImport, ...]
+
+
+def parse_memory_import_report(data: bytes) -> MemoryImportReport:
+    """Validate ``agent-memory-import.v1`` bytes."""
+    if len(data) > MAX_IMPORT_REPORT_BYTES:
+        raise _fail("Import report exceeds the size limit.")
+    try:
+        document = _mapping(load_json_document(data, "import report"), "import report")
+    except AgentMemoryError:
+        raise
+    except ValueError as exc:
+        raise _fail(str(exc)) from None
+    _exact_keys(
+        document,
+        {"schema_version", "generated_by", "import", "source_export", "stores"},
+        "import report",
+    )
+    if document["schema_version"] != IMPORT_SCHEMA_VERSION:
+        raise _fail(f"Expected an {IMPORT_SCHEMA_VERSION} document.")
+    tool, version = _producer(document["generated_by"], "generated_by")
+    block = _mapping(document["import"], "import")
+    _exact_keys(block, {"import_id", "imported_at", "destination"}, "import")
+    destination = _mapping(block["destination"], "import destination")
+    _exact_keys(destination, {"system", "backend"}, "import destination")
+    source = _mapping(document["source_export"], "source_export")
+    _exact_keys(source, {"export_id", "sha256"}, "source_export")
+    stores: list[StoreImport] = []
+    for raw in _list(document["stores"], "import stores", MAX_STORES, allow_empty=False):
+        entry = _mapping(raw, "import store")
+        _exact_keys(
+            entry,
+            {
+                "source_store_id",
+                "destination_store_id",
+                "received",
+                "imported",
+                "unchanged",
+                "refused",
+                "tombstones_applied",
+            },
+            "import store",
+        )
+        store = StoreImport(
+            source_store_id=_identifier(entry["source_store_id"], "source_store_id"),
+            destination_store_id=_identifier(entry["destination_store_id"], "destination_store_id"),
+            received=_count(entry["received"], "received"),
+            imported=_count(entry["imported"], "imported"),
+            unchanged=_count(entry["unchanged"], "unchanged"),
+            refused=_count(entry["refused"], "refused"),
+            tombstones_applied=_count(entry["tombstones_applied"], "tombstones_applied"),
+        )
+        if store.imported + store.unchanged + store.refused != store.received:
+            raise _fail("An import store does not account for every item it received.")
+        stores.append(store)
+    if len({store.source_store_id for store in stores}) != len(stores):
+        raise _fail("An import report lists a source store twice.")
+    return MemoryImportReport(
+        document_sha256=hashlib.sha256(data).hexdigest(),
+        generated_by_tool=tool,
+        generated_by_version=version,
+        import_id=_identifier(block["import_id"], "import_id"),
+        imported_at=_timestamp(block["imported_at"], "imported_at"),
+        destination_system=_identifier(destination["system"], "destination system"),
+        destination_backend=_identifier(destination["backend"], "destination backend"),
+        source_export_id=_identifier(source["export_id"], "source export_id"),
+        source_export_sha256=_digest(source["sha256"], "source export sha256"),
+        stores=tuple(stores),
+    )
+
+
+def load_memory_import_report(
+    path: Path, *, expected_sha256: str | None = None
+) -> MemoryImportReport:
+    """Read and validate an import report from a bounded local file."""
+    if expected_sha256 is not None and (
+        not isinstance(expected_sha256, str) or not _SHA256.fullmatch(expected_sha256)
+    ):
+        raise _fail("Invalid expected digest.")
+    try:
+        data = read_bounded_file(path, MAX_IMPORT_REPORT_BYTES)
+    except (OSError, ValueError):
+        raise _fail("The import report is missing, linked, or over the size limit.") from None
+    if expected_sha256 is not None and hashlib.sha256(data).hexdigest() != expected_sha256:
+        raise _fail("Import report differs from its declared SHA-256.")
+    return parse_memory_import_report(data)
