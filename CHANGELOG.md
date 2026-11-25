@@ -8,6 +8,19 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+### Fixed
+- **Exit reports with re-embed records failed the packaged report schema.**
+  0.1.0b3 writes a top-level `re_embed_records` section whenever a manifest
+  declares re-embed records, but `exit-report.schema.json` did not declare it
+  and forbids undeclared fields, so any consumer validating such a report
+  against the shipped schema rejected it. The section is now declared, closed,
+  with each row's fields and values pinned. Reports without re-embed records
+  were unaffected.
+- The test suite now validates **every** exit report it builds against the
+  packaged schema, not one example. 0.1.0b3's only schema test used an example
+  with no re-embed records, which is how the gap shipped. `jsonschema` joins
+  the `dev` extra for this; it is not a runtime dependency.
+
 ## [0.1.0b3] - 2026-11-24
 
 Re-embedded stores in exit reports. A store whose embeddings were rebuilt

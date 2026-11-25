@@ -7,13 +7,69 @@ faked, so the suite is deterministic on a bare interpreter and offline.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Iterator
+from importlib.resources import files
 from typing import Any
 
+import jsonschema
 import pytest
 
+from ai_infrastructure_suite import exit_report as _exit_report
 from ai_infrastructure_suite._inspection import ImportProbe
 from ai_infrastructure_suite.components import Component, EcosystemManifest, ExtraGroup
+
+# --- every exit report built anywhere in the test suite meets its schema -----
+#
+# ``build_exit_report`` is replaced here, before any test module imports it, by
+# a wrapper that validates the report it returns against the packaged
+# exit-report.schema.json and fails the test on any error. The CLI imports the
+# function when the command runs, so it is covered too. 0.1.0b3 shipped a
+# report shape its own schema rejected, because the one schema test looked at
+# a single example; this net looks at every report the tests produce.
+#
+# The wrapper carries what it needs as attributes (``__wrapped__`` and
+# ``schema_errors``), and wrapping is idempotent, so a second import of this
+# file cannot stack wrappers. test_report_schema_net.py proves the net is
+# installed and that it bites.
+
+
+def _install_report_schema_net() -> None:
+    current = _exit_report.build_exit_report
+    if getattr(current, "schema_checked", False):
+        return
+    schema = json.loads(
+        files("ai_infrastructure_suite")
+        .joinpath("data/exit-report.schema.json")
+        .read_text(encoding="utf-8")
+    )
+    jsonschema.Draft202012Validator.check_schema(schema)
+    validator = jsonschema.Draft202012Validator(schema)
+
+    def schema_errors(report: object) -> list[str]:
+        """Every way ``report`` departs from the packaged exit-report schema."""
+        found = sorted(validator.iter_errors(report), key=lambda error: list(error.path))
+        return [
+            f"{'/'.join(str(part) for part in error.path) or '<root>'}: {error.message[:300]}"
+            for error in found
+        ]
+
+    def checked(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        report: dict[str, Any] = checked.__wrapped__(*args, **kwargs)  # type: ignore[attr-defined]
+        errors = schema_errors(report)
+        if errors:
+            raise AssertionError(
+                "exit report does not match the packaged schema: " + "; ".join(errors[:10])
+            )
+        return report
+
+    checked.__wrapped__ = current  # type: ignore[attr-defined]
+    checked.schema_checked = True  # type: ignore[attr-defined]
+    checked.schema_errors = schema_errors  # type: ignore[attr-defined]
+    _exit_report.build_exit_report = checked  # type: ignore[assignment]
+
+
+_install_report_schema_net()
 
 _COMPONENT_DEFAULTS: dict[str, Any] = {
     "id": "example",
