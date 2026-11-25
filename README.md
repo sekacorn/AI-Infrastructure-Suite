@@ -145,7 +145,7 @@ ai-suite manifest         # emit the ecosystem manifest as JSON
 │ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ AIMeter          │ aimeter-oss      │ ai_meter           │ aimeter        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ ModelSwapBench   │ modelswapbench   │ model_swap_bench   │ modelswapbench │ benchmarking │ >=0.1.0b5,<0.2.0│ -         │ optional │
-│ OpenOntologyLite │ openontologylite │ open_ontology_lite │ openontology   │ core         │ >=0.2.0b2,<0.3.0│ 0.2.0b2   │ ok       │
+│ OpenOntologyLite │ openontologylite │ open_ontology_lite │ openontology   │ core         │ >=0.2.0b3,<0.3.0│ 0.2.0b3   │ ok       │
 │ PrivateAIStack   │ privateaistack   │ private_ai_stack   │ privateaistack │ local        │ >=0.2.0b3,<0.3.0│ -         │ optional │
 └──────────────────┴──────────────────┴────────────────────┴────────────────┴──────────────┴─────────────────┴───────────┴──────────┘
 ```
@@ -270,7 +270,7 @@ Every component is pinned to a **compatible range**, never an exact version:
 agentforge-oss    >=0.5.6,<0.6.0
 agentpolicypack   >=0.2.0b1,<0.3.0
 aiauditlog        >=0.2.0b1,<0.3.0
-openontologylite  >=0.2.0b2,<0.3.0
+openontologylite  >=0.2.0b3,<0.3.0
 aimeter-oss       >=0.2.0b1,<0.3.0
 modelswapbench    >=0.1.0b5,<0.2.0
 privateaistack    >=0.2.0b3,<0.3.0
