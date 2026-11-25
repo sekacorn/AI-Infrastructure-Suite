@@ -165,10 +165,48 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      # Download the build artifact with up to three attempts. After GitHub
+      # incidents the artifact service has twice answered "No artifacts found"
+      # for an artifact the build job had just uploaded; a later attempt
+      # succeeds. The last attempt is not continue-on-error, so a real failure
+      # still fails the job, and the check below confirms what arrived.
+      - name: Download artifacts (attempt 1)
+        id: download-1
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: dist
           path: dist
+
+      - name: Wait before retrying the download
+        if: steps.download-1.outcome == 'failure'
+        run: sleep 30
+
+      - name: Download artifacts (attempt 2)
+        id: download-2
+        if: steps.download-1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+
+      - name: Wait before the last download attempt
+        if: steps.download-2.outcome == 'failure'
+        run: sleep 90
+
+      - name: Download artifacts (attempt 3)
+        if: steps.download-2.outcome == 'failure'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+
+      - name: Confirm the downloaded artifacts
+        run: |
+          ls -l dist
+          test "$(find dist -maxdepth 1 -name '*.whl' | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 1
 
       - name: Install the built artifact outside any source tree
         working-directory: /tmp
