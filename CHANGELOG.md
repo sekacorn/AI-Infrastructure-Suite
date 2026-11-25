@@ -8,6 +8,18 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.1.0b4] - 2026-11-24
+
+A patch release. Exit reports that carry re-embed records now match the
+packaged report schema, and the ModelSwapBench floor moves past a security
+fix. No scoring, label or report content changes.
+
+### Changed
+- **Raised the `modelswapbench` floor to `>=0.1.0b4,<0.2.0`** in the
+  `[benchmarking]` and `[full]` extras. 0.1.0b3 and earlier wrote credentials
+  placed in a model's `base_url` to every run artefact and to the logs; 0.1.0b4
+  refuses such a URL.
+
 ### Fixed
 - **Exit reports with re-embed records failed the packaged report schema.**
   0.1.0b3 writes a top-level `re_embed_records` section whenever a manifest

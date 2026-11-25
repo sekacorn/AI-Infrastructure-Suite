@@ -1,7 +1,7 @@
 {
   "schema_version": "exit-report.v1",
   "rubric_version": "1",
-  "suite_version": "0.1.0b3",
+  "suite_version": "0.1.0b4",
   "manifest_sha256": "2c76950a105ef79e3c97af9a90f9ab5e26642a7f154f194a8827c2caaefeaad8",
   "vectors": {
     "policies": {
@@ -97,7 +97,7 @@
       "status": "ok"
     },
     "modelswapbench": {
-      "version": "0.1.0b3",
+      "version": "0.1.0b4",
       "status": "ok"
     },
     "openontologylite": {

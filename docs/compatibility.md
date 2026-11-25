@@ -92,7 +92,7 @@ It builds an in-memory fixture and validates it. It does **not** call AIAuditLog
 ```json
 {
   "schema_version": "1.0",
-  "suite_version": "0.1.0b3",
+  "suite_version": "0.1.0b4",
   "ok": true,
   "layers": [
     {
