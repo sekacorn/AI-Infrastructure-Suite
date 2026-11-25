@@ -1,0 +1,30 @@
+{
+  "schema_version": "agent-memory-import.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "import": {
+    "import_id": "imp-2026-12-01-a",
+    "imported_at": "2026-12-01T11:00:00Z",
+    "destination": {
+      "system": "example-agent-b",
+      "backend": "sqlite"
+    }
+  },
+  "source_export": {
+    "export_id": "exp-sharded",
+    "sha256": "7e04cc8c89bcda52dcaecdec0b5a6139f11994ab500ed5b2c88c5f28ea0ef69a"
+  },
+  "stores": [
+    {
+      "source_store_id": "kb-memory",
+      "destination_store_id": "kb-memory",
+      "received": 5,
+      "imported": 5,
+      "unchanged": 0,
+      "refused": 0,
+      "tombstones_applied": 0
+    }
+  ]
+}

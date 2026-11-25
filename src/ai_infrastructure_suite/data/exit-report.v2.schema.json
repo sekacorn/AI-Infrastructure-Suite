@@ -54,6 +54,9 @@
         "$ref": "#/$defs/vector"
       },
       "properties": {
+        "memory": {
+          "$ref": "#/$defs/memory_vector"
+        },
         "model_providers": {
           "$ref": "#/$defs/model_providers_vector"
         }
@@ -177,6 +180,15 @@
             "type": "string"
           }
         }
+      }
+    },
+    "memory_stores": {
+      "description": "Present only when the memory vector declares memory_inventory. Absent otherwise, so such reports also validate against suite 0.2.0b2's schema.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/memory_store"
       }
     }
   },
@@ -1349,6 +1361,277 @@
           "items": {
             "type": "string"
           }
+        }
+      }
+    },
+    "memory_vector": {
+      "description": "The memory row. Either any generic state, or memory_inventory scored by the scanner from an agent-memory.v1 export. memory_inventory never reaches 0.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/vector"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "score",
+            "verification_level",
+            "reason",
+            "path",
+            "sha256",
+            "attested_claims"
+          ],
+          "properties": {
+            "state": {
+              "const": "memory_inventory"
+            },
+            "score": {
+              "enum": [
+                25,
+                50
+              ]
+            },
+            "verification_level": {
+              "const": "verified (memory export)"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 240,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "attested_claims": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "that the export holds every item",
+                  "that policy deletions happened",
+                  "that the redaction profile was adequate",
+                  "created_at values",
+                  "provenance of imported items",
+                  "that the import ran at the destination",
+                  "the linked embedding model's declarations"
+                ]
+              }
+            },
+            "import_report": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "maxLength": 240,
+                  "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "memory_store": {
+      "description": "One store of a memory_inventory export. 25 needs full vector coverage when vectors are linked and a bound import report that refused nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "store_id",
+        "kind",
+        "layout",
+        "shard_count",
+        "active",
+        "quarantined",
+        "deleted_by_policy",
+        "imported_items",
+        "canonical_sha256",
+        "embeddings",
+        "import",
+        "score",
+        "verification_level",
+        "reason"
+      ],
+      "properties": {
+        "store_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "enum": [
+            "retrieval",
+            "conversation"
+          ]
+        },
+        "layout": {
+          "enum": [
+            "single_file",
+            "sharded_jsonl"
+          ]
+        },
+        "shard_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "active": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "quarantined": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "deleted_by_policy": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "imported_items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "canonical_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "embeddings": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "inventory_path",
+                "inventory_sha256",
+                "inventory_store_id",
+                "items_bound",
+                "items_without_vector",
+                "findings"
+              ],
+              "properties": {
+                "inventory_path": {
+                  "type": "string",
+                  "maxLength": 240,
+                  "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+                },
+                "inventory_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "inventory_store_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "items_bound": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000
+                },
+                "items_without_vector": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000
+                },
+                "findings": {
+                  "type": "array",
+                  "maxItems": 2,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "finding",
+                      "count"
+                    ],
+                    "properties": {
+                      "finding": {
+                        "enum": [
+                          "vector retained after item deletion",
+                          "vector without a memory item"
+                        ]
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "import": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "destination_store_id",
+                "imported",
+                "unchanged",
+                "refused"
+              ],
+              "properties": {
+                "destination_store_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "imported": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000
+                },
+                "unchanged": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000
+                },
+                "refused": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100000
+                }
+              }
+            }
+          ]
+        },
+        "score": {
+          "enum": [
+            25,
+            50
+          ]
+        },
+        "verification_level": {
+          "const": "verified (memory export)"
+        },
+        "reason": {
+          "type": "string"
         }
       }
     }

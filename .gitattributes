@@ -5,3 +5,4 @@ docs/examples/model-swap-evidence/* text eol=lf
 docs/examples/model-providers/* text eol=lf
 docs/examples/model-providers-local/* text eol=lf
 docs/examples/agent-memory/** text eol=lf
+docs/examples/memory-inventory/** text eol=lf

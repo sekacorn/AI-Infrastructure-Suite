@@ -436,6 +436,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         raise ValueError("Invalid vector inventory.")
     rows: dict[str, dict[str, Any]] = {}
     model_providers: dict[str, Any] | None = None
+    memory_stores: list[dict[str, Any]] | None = None
     restore_cache: dict[tuple[str, str], Any] = {}
     restore_profiles: dict[tuple[str, str, str, int], dict[str, Any]] = {}
     # Resolve restore summaries before any row is built. The embeddings vector
@@ -471,6 +472,15 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         elif vector == "model_providers":
             # First, so no other state's branch can score this vector.
             rows[vector], model_providers = _model_providers_row(manifest.parent, entries[vector])
+        elif (
+            isinstance(entries[vector], dict) and entries[vector].get("state") == "memory_inventory"
+        ):
+            if vector != "memory":
+                raise ValueError("Only the memory vector accepts a memory inventory.")
+            from ai_infrastructure_suite.memory_vector import build_vector as build_memory_vector
+
+            memory = build_memory_vector(manifest.parent, entries[vector])
+            rows[vector], memory_stores = memory.row, memory.section
         elif isinstance(entries[vector], dict) and entries[vector].get("state") == "restore_tested":
             reference = _reference(manifest.parent, entries[vector])
             if not verify_restores:
@@ -556,6 +566,8 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         report["re_embed_records"] = re_embed_records
     if model_providers is not None:
         report["model_providers"] = model_providers
+    if memory_stores is not None:
+        report["memory_stores"] = memory_stores
     return report
 
 
@@ -755,6 +767,8 @@ def render_markdown(report: dict[str, Any]) -> str:
             )
     if "model_providers" in report:
         lines.extend(_model_providers_markdown(report["model_providers"]))
+    if "memory_stores" in report:
+        lines.extend(_memory_markdown(report["memory_stores"]))
     lines.extend(["", "## Installed components", ""])
     for name, item in report["components"].items():
         version = item["version"] or "absent"
@@ -812,5 +826,44 @@ def _model_providers_markdown(section: dict[str, Any]) -> list[str]:
                 f"| `{_cell(row['path'])}` | {row['provider_id']} | {_cell(row['model'])} | "
                 f"{row['candidate_provider_kind']}:{_cell(row['candidate_model'])} | "
                 f"{row['candidate_hosting']} | {row['sample_count']} | {accepted} |"
+            )
+    return lines
+
+
+def _memory_markdown(stores: list[dict[str, Any]]) -> list[str]:
+    lines = [
+        "",
+        "## Memory stores",
+        "",
+        "Digests, counts, tombstones and the item-to-vector binding are",
+        "scanner-verified. That the export is complete, that deletions happened, and",
+        "that any import ran are attested. 0 is not reachable: the scanner never",
+        "restores memory.",
+        "",
+        "| Store | Kind | Layout | Active | Quarantined | Deleted (tombstones) | "
+        "Vectors bound | Import refused | Lock-in |",
+        "|---|---|---|---:|---:|---:|---|---|---:|",
+    ]
+    for store in stores:
+        embeddings = store["embeddings"]
+        bound = (
+            "not linked"
+            if embeddings is None
+            else f"{embeddings['items_bound']} of "
+            f"{embeddings['items_bound'] + embeddings['items_without_vector']}"
+        )
+        imported = "no report" if store["import"] is None else str(store["import"]["refused"])
+        lines.append(
+            f"| {store['store_id']} | {store['kind']} | {store['layout']} "
+            f"({store['shard_count']}) | {store['active']} | {store['quarantined']} | "
+            f"{store['deleted_by_policy']} | {bound} | {imported} | {store['score']} |"
+        )
+    lines.append("")
+    for store in stores:
+        lines.append(f"- {store['store_id']}: {store['reason']}")
+        if store["embeddings"] is not None:
+            lines.extend(
+                f"  - finding: {finding['finding']} ({finding['count']} record(s))"
+                for finding in store["embeddings"]["findings"]
             )
     return lines

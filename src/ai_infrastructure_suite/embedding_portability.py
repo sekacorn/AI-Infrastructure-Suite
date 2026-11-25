@@ -136,6 +136,10 @@ class StoreResult:
     reason: str
     warnings: tuple[str, ...]
     findings: tuple[Finding, ...]
+    #: record_id -> the source-text SHA-256 recorded with that vector. Lets
+    #: another evidence document (agent-memory.v1) bind its items to these
+    #: vectors without re-reading the inventory.
+    recorded_source_sha256: Mapping[str, str] = field(default_factory=dict, repr=False)
 
     @property
     def scored(self) -> bool:
@@ -272,7 +276,7 @@ def _source_text(raw: object, root: Path, recorded: str | None) -> str:
 
 
 def _single_file_records(
-    raw: object, root: Path, model: ModelDeclaration
+    raw: object, root: Path, model: ModelDeclaration, recorded_out: dict[str, str]
 ) -> tuple[dict[str, str], int]:
     records = _bounded_list(raw, "store records", MAX_RECORDS_PER_STORE)
     statuses: dict[str, str] = {}
@@ -301,10 +305,13 @@ def _single_file_records(
             "source digest recorded with the vector",
         )
         statuses[record_id] = _source_text(document["source_text"], root, recorded)
+        recorded_out[record_id] = recorded
     return statuses, 0
 
 
-def _shard_records(raw: object, root: Path, model: ModelDeclaration) -> tuple[dict[str, str], int]:
+def _shard_records(
+    raw: object, root: Path, model: ModelDeclaration, recorded_out: dict[str, str]
+) -> tuple[dict[str, str], int]:
     document = _mapping(raw, "store vectors")
     _exact_keys(document, {"layout", "shards", "source_text"}, "sharded store vectors")
     shards = _bounded_list(document["shards"], "store shards", MAX_SHARDS_PER_STORE)
@@ -356,6 +363,7 @@ def _shard_records(raw: object, root: Path, model: ModelDeclaration) -> tuple[di
         statuses[record_id] = _source_text(entry["source_text"], root, recorded[record_id])
     if statuses.keys() != recorded.keys():
         raise ValueError("Every vector record requires one source_text entry.")
+    recorded_out.update(recorded)
     return statuses, len(shards)
 
 
@@ -603,11 +611,12 @@ def scan_embedding_portability(
         layout = vectors.get("layout")
         if not isinstance(layout, str) or layout not in LAYOUTS:
             raise ValueError("Invalid store vector layout.")
+        recorded: dict[str, str] = {}
         if layout == "single_file":
             _exact_keys(vectors, {"layout", "records"}, "single-file store vectors")
-            statuses, shard_count = _single_file_records(vectors["records"], root, model)
+            statuses, shard_count = _single_file_records(vectors["records"], root, model, recorded)
         else:
-            statuses, shard_count = _shard_records(vectors, root, model)
+            statuses, shard_count = _shard_records(vectors, root, model, recorded)
         evaluated = _evaluate_store(
             store_id,
             model,
@@ -617,7 +626,8 @@ def scan_embedding_portability(
             evidence_sha256,
             link,
         )
-        results.append(_soften_deterministic_reason(evaluated, store, root, evidence_sha256))
+        softened = _soften_deterministic_reason(evaluated, store, root, evidence_sha256)
+        results.append(replace(softened, recorded_source_sha256=recorded))
     return _aggregate(tuple(results))
 
 

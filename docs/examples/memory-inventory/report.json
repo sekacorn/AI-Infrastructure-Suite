@@ -1,0 +1,154 @@
+{
+  "schema_version": "exit-report.v2",
+  "rubric_version": "2",
+  "suite_version": "0.2.0b2",
+  "manifest_sha256": "d56a104792ef7702377083051fb485026c070ded849ad41ddc4e14a945b918c5",
+  "vectors": {
+    "policies": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "prompts": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "embeddings": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "fine_tunes": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "memory": {
+      "state": "memory_inventory",
+      "score": 25,
+      "verification_level": "verified (memory export)",
+      "reason": "Worst of 1 store(s): kb-memory scores 25. Verified export with every item bound to its vector, and an import report bound to it by digest accounts for every item (the import itself is attested). Attested, not re-run: that the export holds every item, that the redaction profile was adequate, created_at values, that the import ran at the destination, the linked embedding model's declarations.",
+      "path": "export/agent-memory.json",
+      "sha256": "7e04cc8c89bcda52dcaecdec0b5a6139f11994ab500ed5b2c88c5f28ea0ef69a",
+      "attested_claims": [
+        "that the export holds every item",
+        "that the redaction profile was adequate",
+        "created_at values",
+        "that the import ran at the destination",
+        "the linked embedding model's declarations"
+      ],
+      "import_report": {
+        "path": "import-report.json",
+        "sha256": "614aa870bcd86d5715e832f6b07a78e2ffe0d07d1657820128e06e77a1952b95"
+      }
+    },
+    "audit_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "cost_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "tool_connectors": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "identities": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "ontology": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "contract_terms": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "model_providers": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    }
+  },
+  "components": {
+    "agentforge-oss": {
+      "version": "0.5.7",
+      "status": "ok"
+    },
+    "agentpolicypack": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aiauditlog": {
+      "version": "0.2.0b2",
+      "status": "ok"
+    },
+    "aimeter-oss": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "modelswapbench": {
+      "version": "0.1.0b6",
+      "status": "ok"
+    },
+    "openontologylite": {
+      "version": "0.2.0b3",
+      "status": "ok"
+    },
+    "privateaistack": {
+      "version": null,
+      "status": "optional"
+    }
+  },
+  "legal_notice": "Contract terms are operator-attested. This report is not legal advice.",
+  "memory_stores": [
+    {
+      "store_id": "kb-memory",
+      "kind": "retrieval",
+      "layout": "sharded_jsonl",
+      "shard_count": 2,
+      "active": 5,
+      "quarantined": 0,
+      "deleted_by_policy": 0,
+      "imported_items": 0,
+      "canonical_sha256": "fe30719d04fbbca18204b61bcabd80116777436bf1bcced46fb94a6d87d7f95b",
+      "embeddings": {
+        "inventory_path": "embeddings/embedding-portability.json",
+        "inventory_sha256": "240f929548774db51c49ba4a5e3d8559160d76340977baf1308968f100e0b14c",
+        "inventory_store_id": "kb-memory",
+        "items_bound": 5,
+        "items_without_vector": 0,
+        "findings": []
+      },
+      "import": {
+        "destination_store_id": "kb-memory",
+        "imported": 5,
+        "unchanged": 0,
+        "refused": 0
+      },
+      "score": 25,
+      "verification_level": "verified (memory export)",
+      "reason": "Verified export with every item bound to its vector, and an import report bound to it by digest accounts for every item (the import itself is attested)."
+    }
+  ]
+}
