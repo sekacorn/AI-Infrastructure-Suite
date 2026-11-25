@@ -1,0 +1,36 @@
+{
+  "schema_version": "provider-inventory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "providers": [
+    {
+      "provider_id": "vendor_c",
+      "kind": "openai",
+      "preset": null,
+      "preset_source": null,
+      "endpoint_origin": null,
+      "endpoint_override_present": true,
+      "jurisdiction": "unknown",
+      "models": [
+        {
+          "model": "vendor-c-large",
+          "source": "declared"
+        },
+        {
+          "model": "vendor-c-small",
+          "source": "registry"
+        }
+      ],
+      "openai_compatible_fallback": {
+        "available": false
+      },
+      "features": {
+        "tool_calling": false,
+        "streaming": false,
+        "vendor_only": []
+      }
+    }
+  ]
+}
