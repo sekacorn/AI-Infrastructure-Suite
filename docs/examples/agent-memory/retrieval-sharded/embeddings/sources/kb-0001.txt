@@ -1,0 +1,1 @@
+Customers can change their delivery address until the order ships.
