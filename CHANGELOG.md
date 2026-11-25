@@ -21,6 +21,13 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
   A test pins both sides of that boundary against a copy of the 0.2.0b1
   schema. New example: `docs/examples/provider-inventory/registry-and-override.json`.
 
+### Changed
+- **Reserved and limited-broadcast addresses are hosted, not local.**
+  `240.0.0.0/4` (RFC 1112 reserved) and `255.255.255.255`, and their
+  IPv4-mapped forms. Python's `is_private` includes them, so an endpoint there
+  was classified as local. The shared `endpoint-locality-cases.v1` table gains
+  six cases; AgentForge and ModelSwapBench make the same change.
+
 ## [0.2.0b1] - 2026-11-25
 
 A minor release: exit reports gain a twelfth vector, `model_providers`, which
