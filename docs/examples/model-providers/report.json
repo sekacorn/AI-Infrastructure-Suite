@@ -1,0 +1,233 @@
+{
+  "schema_version": "exit-report.v2",
+  "rubric_version": "2",
+  "suite_version": "0.1.0b4",
+  "manifest_sha256": "c52d9f56e89c3ebb9d09d298604d843409ca4cf7296e339f7a72c23bc4f2e3ba",
+  "vectors": {
+    "policies": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "prompts": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "embeddings": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "fine_tunes": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "memory": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "audit_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "cost_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "tool_connectors": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "identities": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "ontology": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "contract_terms": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "model_providers": {
+      "state": "provider_inventory",
+      "score": 75,
+      "verification_level": "attested",
+      "reason": "Worst of 2 providers: vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented. Attested, not re-run: models in use, features in use, jurisdiction, producer, vendor-only features and their reconstruction paths, that the declared fallback works, that an SDK default endpoint is the vendor's, that any benchmarked model was run, every measured number.",
+      "path": "provider-inventory.json",
+      "sha256": "259c88f4b9cbb3cef2443f5db08691442b8d1b932498713be99fbf84756afe41"
+    }
+  },
+  "components": {
+    "agentforge-oss": {
+      "version": "0.5.6",
+      "status": "ok"
+    },
+    "agentpolicypack": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aiauditlog": {
+      "version": "0.2.0b2",
+      "status": "ok"
+    },
+    "aimeter-oss": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "modelswapbench": {
+      "version": "0.1.0b5",
+      "status": "ok"
+    },
+    "openontologylite": {
+      "version": "0.2.0b3",
+      "status": "ok"
+    },
+    "privateaistack": {
+      "version": null,
+      "status": "optional"
+    }
+  },
+  "legal_notice": "Contract terms are operator-attested. This report is not legal advice.",
+  "model_providers": {
+    "inventory": {
+      "path": "provider-inventory.json",
+      "sha256": "259c88f4b9cbb3cef2443f5db08691442b8d1b932498713be99fbf84756afe41",
+      "generated_by_tool": "example-tool",
+      "generated_by_version": "1.0",
+      "generated_by_verification": "attested"
+    },
+    "governing_provider": "vendor_b",
+    "providers": [
+      {
+        "provider_id": "gateway_a",
+        "kind": "openai_compatible",
+        "endpoint_origin": "https://llm.vendor-a.example",
+        "hosting": "hosted",
+        "hosting_verification": "derived",
+        "jurisdiction": "XA",
+        "jurisdiction_verification": "attested",
+        "models": [
+          "model-large"
+        ],
+        "models_with_accepted_alternative": 1,
+        "tested_alternatives": 2,
+        "openai_compatible_fallback": true,
+        "tool_calling": true,
+        "streaming": false,
+        "vendor_only_features": [],
+        "score": 25,
+        "verification_level": "verified (benchmark arithmetic)",
+        "cases": [],
+        "features_not_exercised": [],
+        "reason": "gateway_a scores 25: every model in use has an accepted local alternative that exercised every feature in use."
+      },
+      {
+        "provider_id": "vendor_b",
+        "kind": "anthropic",
+        "endpoint_origin": null,
+        "hosting": "hosted",
+        "hosting_verification": "sdk_default",
+        "jurisdiction": "XB",
+        "jurisdiction_verification": "attested",
+        "models": [
+          "vendor-b-model"
+        ],
+        "models_with_accepted_alternative": 0,
+        "tested_alternatives": 0,
+        "openai_compatible_fallback": false,
+        "tool_calling": false,
+        "streaming": false,
+        "vendor_only_features": [
+          {
+            "feature": "server_side_prompt_cache",
+            "reconstruction": "documented"
+          }
+        ],
+        "score": 75,
+        "verification_level": "attested",
+        "cases": [],
+        "features_not_exercised": [],
+        "reason": "vendor_b scores 75: a vendor-only feature is in use; a reconstruction path is documented."
+      }
+    ],
+    "tested_alternatives": [
+      {
+        "path": "swap-local.json",
+        "sha256": "25431ed09b02d5c10702dc77db577a7cfff3d9d85ea3f46b7fc5238c91c67574",
+        "provider_id": "gateway_a",
+        "model": "model-large",
+        "candidate_provider_kind": "ollama",
+        "candidate_model": "model-small",
+        "candidate_endpoint_origin": "http://127.0.0.1:11434",
+        "candidate_hosting": "local",
+        "candidate_declaration_contradicted": false,
+        "producer_recommendation": "recommended with conditions",
+        "accepted": true,
+        "reasons": [],
+        "sample_count": 24,
+        "tool_calling_exercised": true,
+        "verification_level": "verified (benchmark arithmetic)",
+        "attested_claims": [
+          "that any model was run",
+          "every measured number",
+          "producer"
+        ]
+      },
+      {
+        "path": "swap-hosted.json",
+        "sha256": "d62d1771174587273b69866e317e757c08ae89546bd730d5c9f5fdb99d958951",
+        "provider_id": "gateway_a",
+        "model": "model-large",
+        "candidate_provider_kind": "openai_compatible",
+        "candidate_model": "model-medium",
+        "candidate_endpoint_origin": "https://api.vendor-b.example:8443",
+        "candidate_hosting": "hosted",
+        "candidate_declaration_contradicted": false,
+        "producer_recommendation": "recommended with conditions",
+        "accepted": true,
+        "reasons": [],
+        "sample_count": 24,
+        "tool_calling_exercised": false,
+        "verification_level": "verified (benchmark arithmetic)",
+        "attested_claims": [
+          "that any model was run",
+          "every measured number",
+          "producer"
+        ]
+      }
+    ],
+    "attested_claims": [
+      "models in use",
+      "features in use",
+      "jurisdiction",
+      "producer",
+      "vendor-only features and their reconstruction paths",
+      "that the declared fallback works",
+      "that an SDK default endpoint is the vendor's",
+      "that any benchmarked model was run",
+      "every measured number"
+    ]
+  }
+}

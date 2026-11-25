@@ -1,0 +1,20 @@
+{
+  "schema_version": "exit-manifest.v1",
+  "vectors": {
+    "model_providers": {
+      "state": "provider_inventory",
+      "path": "provider-inventory.json",
+      "sha256": "259c88f4b9cbb3cef2443f5db08691442b8d1b932498713be99fbf84756afe41",
+      "tested_alternatives": [
+        {
+          "path": "swap-local.json",
+          "sha256": "25431ed09b02d5c10702dc77db577a7cfff3d9d85ea3f46b7fc5238c91c67574"
+        },
+        {
+          "path": "swap-hosted.json",
+          "sha256": "d62d1771174587273b69866e317e757c08ae89546bd730d5c9f5fdb99d958951"
+        }
+      ]
+    }
+  }
+}

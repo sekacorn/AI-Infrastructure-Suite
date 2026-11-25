@@ -1,6 +1,6 @@
 {
-  "schema_version": "exit-report.v1",
-  "rubric_version": "1",
+  "schema_version": "exit-report.v2",
+  "rubric_version": "2",
   "suite_version": "0.1.0b4",
   "manifest_sha256": "18d374bb936731ac7f4783d4c37ba3ba2670a3aaa1d6f9ac9d0dfdf92989b1ac",
   "vectors": {
@@ -75,11 +75,17 @@
       "reason": "Operator checklist: data_export_rights=confirmed, fine_tune_adapter_ownership=unknown, egress_fees=limited, termination_assistance=confirmed. Not legal advice.",
       "path": "contract-terms.json",
       "sha256": "0214654c8f2b9c90eef14e1e89bd953334239c3334ebeb4964e5bee3334c942f"
+    },
+    "model_providers": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
     }
   },
   "components": {
     "agentforge-oss": {
-      "version": "0.5.5",
+      "version": "0.5.6",
       "status": "ok"
     },
     "agentpolicypack": {
@@ -95,7 +101,7 @@
       "status": "ok"
     },
     "modelswapbench": {
-      "version": "0.1.0b4",
+      "version": "0.1.0b5",
       "status": "ok"
     },
     "openontologylite": {

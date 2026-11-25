@@ -8,13 +8,32 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+**Rubric 2. Exit reports are now `exit-report.v2`.** A consumer that
+validates reports against the v1 schema, or expects exactly eleven vectors,
+must update. The v1 schema stays packaged. The first eleven vectors and their
+scores are unchanged for the same evidence. The next release is 0.2.0b1.
+
 ### Added
+- **The `model_providers` vector**, the twelfth. It scores whether the system
+  could leave the model providers it calls, from a `provider-inventory.v1` and
+  optional `model-swap-evidence.v1` tested alternatives. Each provider is
+  scored 25, 50, 75 or 100 and the vector takes the worst; **0 is unreachable
+  in rubric 2**, because the suite never runs a model. A 50 always names
+  which case applied. Accepted alternatives are recomputed from the
+  benchmark's numbers with a 20-sample floor; cost is ignored; jurisdiction is
+  shown and never scored. A new level, `verified (benchmark arithmetic)`,
+  marks a provider scored from benchmark evidence. See
+  `docs/exit-report.md`, and the worked example in
+  `docs/examples/model-providers/`.
+- `exit-report.v2.schema.json`, with a top-level `model_providers` section.
+  The manifest schema accepts the new vector with `provider_inventory` or
+  `inapplicable` only. Suite 0.1.0b4 and earlier refuse a manifest that
+  declares it.
 - **`provider-inventory.v1`**, a new evidence format listing the model
   providers a system calls, with a packaged JSON Schema, four example
   documents, and a bounded reader in
   `ai_infrastructure_suite.provider_inventory`. It is the evidence for the
-  `model_providers` lock-in vector, which a later release adds; nothing reads
-  it into an exit report yet, and no score changes.
+  `model_providers` vector above.
 - Hosting in an inventory is **derived** from each endpoint origin with the
   same no-DNS rule AgentForge and ModelSwapBench use, and a declaration may
   only add hosted-ness. Endpoint origins carrying credentials, a path or a
@@ -28,11 +47,17 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
   suite's stricter rule: at least 20 samples, a quality score, no test
   fixture on either side, and cost ignored. `bind_to_inventory` names the one
   inventory provider and model a document tested, refusing no match or two.
-  Ten example documents ship in `docs/examples/model-swap-evidence/`. Nothing
-  reads this into an exit report yet, and no score changes.
+  Ten example documents ship in `docs/examples/model-swap-evidence/`.
 - A **`producer-agreement`** CI workflow installs ModelSwapBench from its main
   branch and checks, over a grid of its real output, that both decision rules
   agree.
+
+### Changed
+- `VECTORS` grows from eleven to twelve; `model_providers` is appended, so the
+  first eleven keep their order.
+- The swap-evidence reader now refuses a side declared `local` at an endpoint
+  that is not local, as the provider inventory does.
+- The committed example reports are regenerated as v2.
 
 ## [0.1.0b4] - 2026-11-24
 

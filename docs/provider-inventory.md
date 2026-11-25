@@ -3,8 +3,8 @@
 A provider inventory lists the model providers a system calls: which provider,
 where its endpoint is, which models, whether an OpenAI-compatible fallback is
 declared, and which features are in use. It is the evidence behind the
-`model_providers` lock-in vector. This release reads and validates it; the
-vector and its scoring come in a later release.
+`model_providers` lock-in vector, scored in rubric 2: see
+[exit-report.md](exit-report.md#model-providers-rubric-2).
 
 ```python
 from ai_infrastructure_suite.provider_inventory import load_provider_inventory

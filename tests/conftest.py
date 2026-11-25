@@ -23,7 +23,7 @@ from ai_infrastructure_suite.components import Component, EcosystemManifest, Ext
 #
 # ``build_exit_report`` is replaced here, before any test module imports it, by
 # a wrapper that validates the report it returns against the packaged
-# exit-report.schema.json and fails the test on any error. The CLI imports the
+# exit-report.v2.schema.json and fails the test on any error. The CLI imports the
 # function when the command runs, so it is covered too. 0.1.0b3 shipped a
 # report shape its own schema rejected, because the one schema test looked at
 # a single example; this net looks at every report the tests produce.
@@ -40,7 +40,7 @@ def _install_report_schema_net() -> None:
         return
     schema = json.loads(
         files("ai_infrastructure_suite")
-        .joinpath("data/exit-report.schema.json")
+        .joinpath("data/exit-report.v2.schema.json")
         .read_text(encoding="utf-8")
     )
     jsonschema.Draft202012Validator.check_schema(schema)

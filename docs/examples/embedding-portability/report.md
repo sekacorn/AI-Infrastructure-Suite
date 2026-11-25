@@ -1,6 +1,6 @@
 # Vendor exit evidence
 
-Suite 0.1.0b4 | Rubric 1
+Suite 0.1.0b4 | Rubric 2
 Manifest SHA-256: `2c76950a105ef79e3c97af9a90f9ab5e26642a7f154f194a8827c2caaefeaad8`
 
 Contract terms are operator-attested. This report is not legal advice.
@@ -18,6 +18,7 @@ Contract terms are operator-attested. This report is not legal advice.
 | identities | 100 | unverified | No evidence supplied. | - |
 | ontology | 100 | unverified | No evidence supplied. | - |
 | contract_terms | 100 | unverified | No evidence supplied. | - |
+| model_providers | 100 | unverified | No evidence supplied. | - |
 
 ## Embedding stores
 
@@ -31,10 +32,10 @@ were not re-run.
 
 ## Installed components
 
-- agentforge-oss: 0.5.5 (ok)
+- agentforge-oss: 0.5.6 (ok)
 - agentpolicypack: 0.2.0b1 (ok)
 - aiauditlog: 0.2.0b2 (ok)
 - aimeter-oss: 0.2.0b1 (ok)
-- modelswapbench: 0.1.0b4 (ok)
+- modelswapbench: 0.1.0b5 (ok)
 - openontologylite: 0.2.0b3 (ok)
 - privateaistack: absent (optional)
