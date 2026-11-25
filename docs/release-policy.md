@@ -2,7 +2,7 @@
 
 ## Versioning
 
-The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b3` (Beta release).
+The suite follows [semantic versioning](https://semver.org/) with PEP 440 pre-release identifiers. Current version: `0.1.0b4` (Beta release).
 
 While the suite is `0.x`, the manifest schema, JSON report schemas, and Python API may change between minor versions. Both schemas carry their own `schema_version` so consumers can detect a change rather than discover it.
 
@@ -17,14 +17,14 @@ Every component is pinned to a **compatible range**, never an exact version:
 | `aiauditlog` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b2 |
 | `openontologylite` | `>=0.2.0b3,<0.3.0` | 0.2.0b3 | 0.2.0b3 |
 | `aimeter-oss` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
-| `modelswapbench` | `>=0.1.0b3,<0.2.0` | 0.1.0b3 | 0.1.0b3 |
-| `privateaistack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b1 |
+| `modelswapbench` | `>=0.1.0b4,<0.2.0` | 0.1.0b4 | 0.1.0b4 |
+| `privateaistack` | `>=0.2.0b1,<0.3.0` | 0.2.0b1 | 0.2.0b2 |
 
 Verified against PyPI on the date in the manifest's `version_sources_verified_on`.
 
 AIAuditLog shows the two columns doing their job: the range was set at `0.2.0b1`, `0.2.0b2` was published afterwards, resolves automatically under the existing upper bound, and needed **no suite release**. The minimum stays at `0.2.0b1` because that version is still supported.
 
-A minimum is raised only when an older release should no longer be installed. `agentforge-oss` moved to `0.5.5` because earlier versions could leak a credential through provider errors, and `modelswapbench` moved to `0.1.0b3` because earlier versions reported an unknown cost as zero for some hosted endpoints.
+A minimum is raised only when an older release should no longer be installed. `agentforge-oss` moved to `0.5.5` because earlier versions could leak a credential through provider errors, and `modelswapbench` moved to `0.1.0b4` because earlier versions reported an unknown cost as zero for some hosted endpoints (fixed in `0.1.0b3`) and wrote credentials placed in a model's `base_url` to run artefacts and logs (fixed in `0.1.0b4`).
 
 ### Three rules
 
@@ -51,7 +51,7 @@ The manifest carries both, per component:
 - `minimum_version` — the range's lower bound
 - `latest_published_version` — what was on PyPI when the range was set
 
-When they are equal, the range was calibrated against the newest release. When they diverge — as they now do for AIAuditLog — the component has published something newer that the range still admits, so no suite change is needed.
+When they are equal, the range was calibrated against the newest release. When they diverge — as they now do for AIAuditLog and PrivateAIStack — the component has published something newer that the range still admits, so no suite change is needed.
 
 ```bash
 ai-suite manifest | python -c "
@@ -120,10 +120,10 @@ Without it the publish step fails with `invalid-publisher`. This step cannot be 
 ### Running a release
 
 ```bash
-git tag -a v0.1.0b3 <verified-commit> -m "AI Infrastructure Suite 0.1.0b3"
-git push origin refs/tags/v0.1.0b3:refs/tags/v0.1.0b3
-gh workflow run release.yml -f tag=v0.1.0b3                 # rehearsal
-gh workflow run release.yml -f tag=v0.1.0b3 -f dry_run=false  # real release
+git tag -a v0.1.0b4 <verified-commit> -m "AI Infrastructure Suite 0.1.0b4"
+git push origin refs/tags/v0.1.0b4:refs/tags/v0.1.0b4
+gh workflow run release.yml -f tag=v0.1.0b4                 # rehearsal
+gh workflow run release.yml -f tag=v0.1.0b4 -f dry_run=false  # real release
 ```
 
 Push the tag by explicit refspec, never with `--tags`. Then approve the `pypi` environment deployment when prompted. A published version can never be re-uploaded, so rehearse first.
@@ -132,4 +132,4 @@ Push the tag by explicit refspec, never with `--tags`. Then approve the `pypi` e
 
 - **Python:** 3.11–3.13. The upper bound is the intersection across the ecosystem: four components declare `<3.14`. It will lift when they do.
 - **Platforms:** Linux, macOS, and Windows. The suite is pure Python; the only compiled wheels in the default resolution are `pydantic-core` and `cryptography`.
-- **Maturity caveat:** the seven components and this suite (`0.1.0b3` Beta release) have reached Beta. APIs and schemas may still change before 1.0.
+- **Maturity caveat:** the seven components and this suite (`0.1.0b4` Beta release) have reached Beta. APIs and schemas may still change before 1.0.

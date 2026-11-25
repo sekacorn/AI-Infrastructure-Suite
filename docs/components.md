@@ -113,7 +113,7 @@ Also defines **AI System Maps**: a declarative record of workload purpose, task 
 
 ## ModelSwapBench
 
-**`modelswapbench`** · imports as `model_swap_bench` · CLI `modelswapbench` · range `>=0.1.0b3,<0.2.0` · extra `[benchmarking]`
+**`modelswapbench`** · imports as `model_swap_bench` · CLI `modelswapbench` · range `>=0.1.0b4,<0.2.0` · extra `[benchmarking]`
 
 Repeatable model portability and replacement benchmarking. Suites are strict YAML or JSON defining model candidates, cases, evaluators, constraints, and replacement rules. Evaluators cover exact and substring matching, regex, JSON parsing and schema, field match, tool selection, policy expectations, citations, latency, cost, and a keyword rubric.
 
