@@ -19,6 +19,20 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
   same no-DNS rule AgentForge and ModelSwapBench use, and a declaration may
   only add hosted-ness. Endpoint origins carrying credentials, a path or a
   query are refused, and the reader's errors never repeat a document value.
+- **`model-swap-evidence.v1`**, the canonical schema and a bounded reader in
+  `ai_infrastructure_suite.model_swap_evidence`, for benchmark evidence that a
+  tested alternative exists for a model provider. ModelSwapBench writes it;
+  this package's schema is the authority, and a producer's own may be
+  narrower, never wider. The reader recomputes the decision from the numbers
+  and refuses a document whose stated verdict disagrees. `assess` applies the
+  suite's stricter rule: at least 20 samples, a quality score, no test
+  fixture on either side, and cost ignored. `bind_to_inventory` names the one
+  inventory provider and model a document tested, refusing no match or two.
+  Ten example documents ship in `docs/examples/model-swap-evidence/`. Nothing
+  reads this into an exit report yet, and no score changes.
+- A **`producer-agreement`** CI workflow installs ModelSwapBench from its main
+  branch and checks, over a grid of its real output, that both decision rules
+  agree.
 
 ## [0.1.0b4] - 2026-11-24
 
