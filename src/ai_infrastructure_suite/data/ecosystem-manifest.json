@@ -154,7 +154,7 @@
       "minimum_version": "0.1.0b5",
       "maximum_version_exclusive": "0.2.0",
       "version_specifier": ">=0.1.0b5,<0.2.0",
-      "latest_published_version": "0.1.0b5",
+      "latest_published_version": "0.1.0b6",
       "repository_url": "https://github.com/sekacorn/ModelSwapBench",
       "pypi_url": "https://pypi.org/project/modelswapbench/",
       "api_symbols": ["ExitCode", "ModelSwapBenchError", "ValidationError", "evaluate_gate", "GateThresholds"],
