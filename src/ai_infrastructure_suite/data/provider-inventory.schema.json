@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/AI-Infrastructure-Suite/schemas/provider-inventory.v1.json",
+  "title": "provider-inventory.v1",
+  "description": "The model providers a system calls. Everything here is the operator's declaration except hosting, which a reader derives from endpoint_origin. Cross-field rules a JSON Schema cannot express are enforced by the reader: provider_id and model uniqueness, that a fallback names another listed provider, that endpoint_origin is canonical and that hosting_declared: local is refused for an endpoint that is not local, which kinds may omit endpoint_origin, and that not_applicable jurisdiction is only for a local provider.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_by",
+    "providers"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "provider-inventory.v1"
+    },
+    "generated_by": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool",
+        "version"
+      ],
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "description": "Producer strings. Attested and never trusted."
+    },
+    "providers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/provider"
+      }
+    }
+  },
+  "$defs": {
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "kind",
+        "preset",
+        "preset_source",
+        "endpoint_origin",
+        "jurisdiction",
+        "models",
+        "openai_compatible_fallback",
+        "features"
+      ],
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_]{1,64}$"
+        },
+        "kind": {
+          "enum": [
+            "openai",
+            "openai_compatible",
+            "anthropic",
+            "bedrock",
+            "ollama",
+            "echo",
+            "other"
+          ]
+        },
+        "preset": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9_]{1,64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preset_source": {
+          "enum": [
+            "built_in",
+            "user",
+            null
+          ]
+        },
+        "endpoint_origin": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 256,
+              "pattern": "^https?://(\\[[0-9a-f:.]+\\]|[a-z0-9.-]+)(:[0-9]{1,5})?$",
+              "description": "Scheme, host and optional port. No credentials, path, query or fragment."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hosting_declared": {
+          "enum": [
+            "local",
+            "hosted"
+          ]
+        },
+        "jurisdiction": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Z]{2}$"
+            },
+            {
+              "enum": [
+                "unknown",
+                "not_applicable"
+              ]
+            }
+          ],
+          "description": "ISO 3166-1 alpha-2, unknown, or not_applicable. Always attested."
+        },
+        "models": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "model"
+            ],
+            "properties": {
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          }
+        },
+        "openai_compatible_fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "available"
+          ],
+          "properties": {
+            "available": {
+              "type": "boolean"
+            },
+            "provider_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]{1,64}$"
+            }
+          },
+          "if": {
+            "properties": {
+              "available": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "provider_id"
+              ]
+            }
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tool_calling",
+            "streaming",
+            "vendor_only"
+          ],
+          "properties": {
+            "tool_calling": {
+              "type": "boolean"
+            },
+            "streaming": {
+              "type": "boolean"
+            },
+            "vendor_only": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "feature",
+                  "reconstruction"
+                ],
+                "properties": {
+                  "feature": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]{1,64}$"
+                  },
+                  "reconstruction": {
+                    "enum": [
+                      "documented",
+                      "none"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "preset": {
+                "type": "null"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "preset_source": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "preset_source": {
+                "enum": [
+                  "built_in",
+                  "user"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

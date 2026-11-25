@@ -1,0 +1,39 @@
+{
+  "schema_version": "provider-inventory.v1",
+  "generated_by": {
+    "tool": "example-tool",
+    "version": "1.0"
+  },
+  "providers": [
+    {
+      "provider_id": "vendor_b",
+      "kind": "anthropic",
+      "preset": null,
+      "preset_source": null,
+      "endpoint_origin": null,
+      "jurisdiction": "XB",
+      "models": [
+        {
+          "model": "vendor-b-model"
+        }
+      ],
+      "openai_compatible_fallback": {
+        "available": false
+      },
+      "features": {
+        "tool_calling": true,
+        "streaming": true,
+        "vendor_only": [
+          {
+            "feature": "server_side_prompt_cache",
+            "reconstruction": "documented"
+          },
+          {
+            "feature": "hosted_file_search",
+            "reconstruction": "none"
+          }
+        ]
+      }
+    }
+  ]
+}
