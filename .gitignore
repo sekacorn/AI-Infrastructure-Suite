@@ -40,6 +40,9 @@ secrets.*
 *.sqlite
 *.sqlite3
 *.jsonl
+# Committed example fixtures: shard and vector files whose digests the
+# examples declare. Local JSONL data stays ignored everywhere else.
+!docs/examples/**/*.jsonl
 
 # Editor and OS
 .vscode/

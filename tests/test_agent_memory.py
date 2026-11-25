@@ -12,6 +12,7 @@ import copy
 import hashlib
 import json
 import shutil
+import subprocess
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,22 @@ def test_every_fixture_parses_and_matches_the_schema(name: str) -> None:
         root / "agent-memory.json", expected_sha256=hashlib.sha256(data).hexdigest()
     )
     assert result.stores and result.document_sha256 == hashlib.sha256(data).hexdigest()
+
+
+def test_no_example_file_is_ignored_by_git() -> None:
+    # The repository ignores *.jsonl; an ignored shard would exist locally but
+    # never reach a checkout, so the example would only pass on this machine.
+    repo = Path(__file__).resolve().parents[1]
+    if shutil.which("git") is None or not (repo / ".git").exists():
+        pytest.skip("not a git checkout")
+    ignored = subprocess.run(
+        ["git", "ls-files", "--others", "--ignored", "--exclude-standard", "docs/examples"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert ignored == []
 
 
 def test_fixture_bytes_are_lf_only() -> None:
