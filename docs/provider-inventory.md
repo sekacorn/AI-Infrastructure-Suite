@@ -44,6 +44,28 @@ Models in use, features in use, vendor-only features, reconstruction paths,
 whether a fallback works, and the `generated_by` producer strings are all
 attested.
 
+## Two optional producer markers
+
+Since suite 0.2.0b2 a producer may mark two things it could not confirm.
+Each is optional and is emitted only when it carries information, so an
+inventory that uses neither still validates against suite 0.2.0b1's schema.
+An inventory that uses either needs suite 0.2.0b2 or later.
+
+- **`models[].source`**: `"declared"` or `"registry"`. `"registry"` marks a
+  model the producer took from its own model registry rather than from the
+  operator's declaration: from registry, not confirmed in use. The reader
+  exposes these as `registry_models`.
+- **`endpoint_override_present: true`**, on a provider recorded at its SDK
+  default (null `endpoint_origin`, kind `openai`, `anthropic` or `bedrock`):
+  an endpoint override such as an environment variable is set. It is
+  **present, not reflected**: the origin stays null, hosting stays the
+  vendor's default, and the score does not move. Any other value, or the
+  field on a provider that states its own origin, is refused.
+
+Neither changes a score. Each adds a line to the attested claims, at the
+provider and at the vector, so a reader sees what the producer could not
+confirm.
+
 ## No credentials, ever
 
 `endpoint_origin` is a scheme, a host and an optional port, in canonical
@@ -76,6 +98,8 @@ and the reader enforces those alone:
 - hosting derivation, and refusing `local` for a public endpoint;
 - which kinds may omit `endpoint_origin`;
 - `not_applicable` jurisdiction only for a local provider.
+- `endpoint_override_present` only on an SDK-default provider is expressed
+  in the schema too; its value must be `true`.
 
 The test suite pins this division: every negative case is refused by the
 reader, and each records whether the schema rejects it too.

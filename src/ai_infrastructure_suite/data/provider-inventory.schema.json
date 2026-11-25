@@ -106,6 +106,10 @@
             }
           ]
         },
+        "endpoint_override_present": {
+          "const": true,
+          "description": "Optional. An SDK endpoint override (for example an environment variable) is set for a provider recorded at its SDK default. Present, not reflected: the origin stays null and hosting stays the vendor's default. Omitted when absent."
+        },
         "hosting_declared": {
           "enum": [
             "local",
@@ -142,6 +146,13 @@
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 256
+              },
+              "source": {
+                "enum": [
+                  "declared",
+                  "registry"
+                ],
+                "description": "Optional. 'registry' marks a model taken from the producer's model registry: from registry, not confirmed in use. Omitted when it adds nothing."
               }
             }
           }
@@ -240,6 +251,27 @@
                 "enum": [
                   "built_in",
                   "user"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "endpoint_override_present"
+            ]
+          },
+          "then": {
+            "properties": {
+              "endpoint_origin": {
+                "type": "null"
+              },
+              "kind": {
+                "enum": [
+                  "openai",
+                  "anthropic",
+                  "bedrock"
                 ]
               }
             }

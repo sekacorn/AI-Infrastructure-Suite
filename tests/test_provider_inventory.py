@@ -19,6 +19,8 @@ import jsonschema
 import pytest
 
 from ai_infrastructure_suite.provider_inventory import (
+    CLAIM_ENDPOINT_OVERRIDE,
+    CLAIM_REGISTRY_MODELS,
     MAX_INVENTORY_BYTES,
     SCHEMA_VERSION,
     ProviderInventoryError,
@@ -36,6 +38,15 @@ SCHEMA = json.loads(
     .read_text(encoding="utf-8")
 )
 VALIDATOR = jsonschema.Draft202012Validator(SCHEMA)
+#: The schema exactly as suite 0.2.0b1 shipped it, before the two optional
+#: producer markers existed.
+SCHEMA_0_2_0B1 = json.loads(
+    (
+        Path(__file__).resolve().parent / "fixtures" / "provider-inventory.schema.0.2.0b1.json"
+    ).read_text(encoding="utf-8")
+)
+#: Shipped examples that use neither optional marker.
+WITHOUT_MARKERS = [name for name in FIXTURES if name != "registry-and-override.json"]
 
 
 def _fixture(name: str) -> dict[str, Any]:
@@ -68,6 +79,7 @@ def test_the_expected_fixtures_ship() -> None:
         "hosted-with-fallback.json",
         "local-only.json",
         "minimal.json",
+        "registry-and-override.json",
         "vendor-only-features.json",
     ]
 
@@ -134,6 +146,80 @@ def test_the_attested_claims_name_what_the_reader_cannot_check() -> None:
 
     assert {"models in use", "features in use", "jurisdiction", "producer"} <= set(claims)
     assert "that the declared fallback works" in claims
+
+
+# --- optional producer markers (suite 0.2.0b2) ------------------------------
+
+
+def test_registry_models_and_an_endpoint_override_are_read() -> None:
+    provider = _parse(_fixture("registry-and-override.json")).providers[0]
+
+    assert provider.models == ("vendor-c-large", "vendor-c-small")
+    assert provider.registry_models == ("vendor-c-small",)
+    assert provider.endpoint_override_present is True
+    # Present, not reflected: the origin stays null and hosting stays hosted.
+    assert (provider.endpoint_origin, provider.hosting, provider.hosting_verification) == (
+        None,
+        "hosted",
+        "sdk_default",
+    )
+
+
+def test_both_markers_feed_the_attested_claims() -> None:
+    claims = _parse(_fixture("registry-and-override.json")).attested_claims()
+
+    assert CLAIM_REGISTRY_MODELS in claims
+    assert CLAIM_ENDPOINT_OVERRIDE in claims
+    assert "from registry, not confirmed in use" in CLAIM_REGISTRY_MODELS
+
+
+@pytest.mark.parametrize("name", WITHOUT_MARKERS)
+def test_an_inventory_without_markers_claims_neither(name: str) -> None:
+    inventory = _parse(_fixture(name))
+
+    for provider in inventory.providers:
+        assert not provider.registry_models
+        assert not provider.endpoint_override_present
+    assert CLAIM_REGISTRY_MODELS not in inventory.attested_claims()
+    assert CLAIM_ENDPOINT_OVERRIDE not in inventory.attested_claims()
+
+
+def test_a_declared_source_is_not_a_registry_model() -> None:
+    document = base()
+    document["providers"][0]["models"] = [{"model": "model-large", "source": "declared"}]
+
+    assert _parse(document).providers[0].registry_models == ()
+    assert _schema_accepts(document)
+
+
+@pytest.mark.parametrize("name", WITHOUT_MARKERS)
+def test_a_default_inventory_still_validates_against_the_0_2_0b1_schema(name: str) -> None:
+    # Emitted only when they carry information, so an inventory without either
+    # marker stays readable by suite 0.2.0b1.
+    assert list(jsonschema.Draft202012Validator(SCHEMA_0_2_0B1).iter_errors(_fixture(name))) == []
+
+
+def test_the_0_2_0b1_schema_refuses_each_marker() -> None:
+    # Pins the compatibility boundary the AgentForge changelog states: an
+    # inventory that uses either marker needs suite 0.2.0b2 or later.
+    old = jsonschema.Draft202012Validator(SCHEMA_0_2_0B1)
+    with_source = base()
+    with_source["providers"][0]["models"][0]["source"] = "registry"
+    with_override = _fixture("vendor-only-features.json")
+    with_override["providers"][0]["endpoint_override_present"] = True
+
+    assert _schema_accepts(with_source) and not old.is_valid(with_source)
+    assert _schema_accepts(with_override) and not old.is_valid(with_override)
+
+
+def test_an_override_on_each_sdk_default_kind_is_accepted() -> None:
+    for kind in ("openai", "anthropic", "bedrock"):
+        document = _fixture("vendor-only-features.json")
+        document["providers"][0]["kind"] = kind
+        document["providers"][0]["endpoint_override_present"] = True
+
+        assert _parse(document).providers[0].endpoint_override_present
+        assert _schema_accepts(document)
 
 
 # --- the local rule, pinned to AgentForge's and ModelSwapBench's cases -------
@@ -266,6 +352,13 @@ NEGATIVE: dict[str, tuple[Any, bool]] = {
     ),
     "duplicate provider_id": (_set(["providers", 1, "provider_id"], "gateway_a"), False),
     "local declared for a public endpoint": (_set([*P0, "hosting_declared"], "local"), False),
+    "unknown model source": (_set([*P0, "models", 0, "source"], "guessed"), True),
+    "model source not a string": (_set([*P0, "models", 0, "source"], 1), True),
+    "endpoint override false": (_set([*P0, "endpoint_override_present"], False), True),
+    "endpoint override on a provider with an origin": (
+        _set([*P0, "endpoint_override_present"], True),
+        True,
+    ),
 }
 
 
