@@ -272,11 +272,10 @@ def test_tool_calling_counts_as_exercised_only_with_a_tool_accuracy() -> None:
         ("http://127.0.0.1:11434", "local", "local", False),
         ("http://[fd00::10]:8000", "self_hosted", "local", False),
         ("http://10.1.2.3", "local", "local", False),
-        # Presented as local, at a public host: hosted, and said to be so.
-        ("https://api.vendor-b.example", "local", "hosted", True),
+        # Self-hosted at a public host: legitimate, hosted, and said to be so.
         ("https://api.vendor-b.example", "self_hosted", "hosted", True),
         # A name is never resolved, so it is never local.
-        ("http://ollama.internal:11434", "local", "hosted", True),
+        ("http://ollama.internal:11434", "self_hosted", "hosted", True),
         # A declaration may add hosted-ness.
         ("http://127.0.0.1:11434", "hosted", "hosted", False),
     ],
@@ -299,9 +298,42 @@ def test_a_real_provider_with_no_endpoint_is_hosted() -> None:
     document["candidate"].update(provider_kind="anthropic", endpoint_origin=None)
     document["candidate"]["deployment_declared"] = "hosted"
     assert _parse(document).candidate.hosting == "hosted"
-    # Even when the declaration says local: not positively local is hosted.
-    document["candidate"].update(provider_kind="ollama", deployment_declared="local")
+    document["candidate"]["deployment_declared"] = "self_hosted"
     assert _parse(document).candidate.hosting == "hosted"
+
+
+@pytest.mark.parametrize("side", ["candidate", "baseline"])
+@pytest.mark.parametrize(
+    ("kind", "origin"),
+    [
+        ("openai_compatible", "https://api.vendor-b.example"),
+        ("openai_compatible", "http://ollama.internal:11434"),
+        # Shared address space (RFC 6598): not private, so not local.
+        ("ollama", "http://100.64.0.1:11434"),
+        ("anthropic", None),
+        ("ollama", None),
+    ],
+)
+def test_a_side_declared_local_at_an_endpoint_that_is_not_local_is_refused(
+    side: str, kind: str, origin: str | None
+) -> None:
+    # The same rule a provider inventory applies to hosting_declared: local.
+    document = _refused(
+        lambda d: d[side].update(
+            provider_kind=kind, endpoint_origin=origin, deployment_declared="local"
+        ),
+        match="declares local deployment",
+    )
+    # Cross-field: the schema cannot see it.
+    assert VALIDATOR.is_valid(document)
+
+
+def test_a_fixture_declared_local_is_not_refused() -> None:
+    document = base()
+    document["candidate"].update(
+        provider_kind="deterministic", endpoint_origin=None, deployment_declared="local"
+    )
+    assert assess(_parse(document)).candidate_hosting == "fake"
 
 
 def test_a_hosted_candidate_fails_the_deployment_gate_when_hosted_is_not_permitted() -> None:
@@ -655,7 +687,7 @@ def test_agreement_with_the_producers_decision_engine_over_a_grid() -> None:
             "alias": "alt_hosted",
             "provider": "openai_compatible",
             "model": "model-medium",
-            "deployment": "local",
+            "deployment": "self_hosted",
             "base_url": "https://api.vendor-b.example/v1",
         },
     ]
