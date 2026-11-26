@@ -4,7 +4,7 @@
     "tool_connectors": {
       "state": "tool_inventory",
       "path": "tool-inventory.json",
-      "sha256": "1b9d30300103043f7337fcb80e6a2c9b0912ff2fbf05181f5700405d1d091bbb",
+      "sha256": "2bcf3a80ef4b55119b9b7259dd7bcb3e0d83a40f4b05c8e85b7a4de3f3c4240e",
       "approvals": {
         "path": "tool-approvals.json",
         "sha256": "8857a379b08c2897defa1c10e2cfa5a4762f9999f59df607bd4b916cb90aed35"

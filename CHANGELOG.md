@@ -25,6 +25,19 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
     0.2.0b3's schema; a snapshot test pins this.
 - **`tool-inventory.v1`**: JSON Schema, bounded strict reader
   (`ai_infrastructure_suite.tool_inventory`) and docs (`docs/tool-inventory.md`).
+- **Every tool declares its `backend`** (required, and may be `null`).
+  - `null` means the tool is self-contained.
+  - A tool that depends on an external service names it:
+    `{system, portability, reconstruction}`. This includes a vendor API
+    behind a third-party MCP server.
+  - A vendor-only backend scores the tool 75 (documented) or 100 (none)
+    **regardless of MCP, approval or hosting**. When a vendor-only tool also
+    has a vendor-only backend, the worse reconstruction governs.
+  - "that each tool's declared backend is accurate" is always in
+    `attested_claims`.
+  - The report's `tools` rows and markdown table show the backend.
+  - The field was added before `tool-inventory.v1` was first released, so no
+    released reader or writer changes.
 - **Canonical schemas for AgentForge's MCP formats**: `tool-approvals.v1`
   (with a reader, used for scoring), `mcp-servers.v1` and `tool-definition.v1`,
   with fixtures in `docs/examples/mcp-tools/`. AgentForge's `suite-contract`

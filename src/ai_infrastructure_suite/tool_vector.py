@@ -56,6 +56,7 @@ CLAIM_WORKS: Final = "that any tool works"
 CLAIM_SELF_HOSTABLE: Final = "that an MCP server is self-hostable"
 CLAIM_RECONSTRUCTION: Final = "that a documented reconstruction path works"
 CLAIM_BENIGN: Final = "that tool descriptions are benign"
+CLAIM_BACKEND: Final = "that each tool's declared backend is accurate"
 
 APPROVED: Final = "approved"
 NOT_APPROVED: Final = "not_approved"
@@ -105,11 +106,31 @@ def score_tool(tool: InventoryTool, approvals: ToolApprovals | None) -> dict[str
     """One tool's row: its derived hosting, approval state, score and reason."""
     hosting = _hosting(tool)
     approval = _approval_state(tool, approvals)
-    if tool.portability == "vendor_only":
-        if tool.reconstruction == "documented":
-            score, reason = 75, "Vendor-only tool with a documented reconstruction path (attested)."
+    backend = tool.backend
+    vendor_backend = backend is not None and backend.portability == "vendor_only"
+    if vendor_backend or tool.portability == "vendor_only":
+        # A vendor-only dependency governs whatever sits in front of it: an MCP
+        # wrapper, an approval or a local server does not make it portable.
+        paths = []
+        if tool.portability == "vendor_only":
+            paths.append(tool.reconstruction)
+        if vendor_backend:
+            assert backend is not None  # for type checkers  # nosec B101
+            paths.append(backend.reconstruction)
+        documented = all(path == "documented" for path in paths)
+        subject = (
+            f"depends on vendor-only service {backend.system}"
+            if vendor_backend and backend is not None
+            else "is vendor-only"
+        )
+        if documented:
+            score = 75
+            reason = f"The tool {subject}, with a documented reconstruction path (attested)."
         else:
-            score, reason = 100, "Vendor-only tool with no reconstruction path."
+            score = 100
+            reason = f"The tool {subject}, with no reconstruction path."
+        if tool.portability == "mcp":
+            reason += " Its MCP interface, approval and hosting do not change this."
     else:
         blockers = []
         if hosting == "hosted":
@@ -136,6 +157,13 @@ def score_tool(tool: InventoryTool, approvals: ToolApprovals | None) -> dict[str
         "portability": tool.portability,
         "reconstruction": tool.reconstruction,
         "definition_sha256": tool.definition_sha256,
+        "backend": None
+        if backend is None
+        else {
+            "system": backend.system,
+            "portability": backend.portability,
+            "reconstruction": backend.reconstruction,
+        },
         "approval": approval,
         "score": score,
         "reason": reason,
@@ -168,9 +196,14 @@ def build_vector(root: Path, entry: object) -> ToolVectorResult:
     attested = [CLAIM_COMPLETE, CLAIM_WORKS]
     if any(t.portability == "mcp" for t in inventory.tools):
         attested.append(CLAIM_SELF_HOSTABLE)
-    if any(t.reconstruction == "documented" for t in inventory.tools):
+    if any(
+        t.reconstruction == "documented"
+        or (t.backend is not None and t.backend.reconstruction == "documented")
+        for t in inventory.tools
+    ):
         attested.append(CLAIM_RECONSTRUCTION)
     attested.append(CLAIM_BENIGN)
+    attested.append(CLAIM_BACKEND)
     reason = (
         f"Worst of {len(section)} tool(s): {worst['tool_id']} scores {worst['score']}. "
         f"{worst['reason']} "

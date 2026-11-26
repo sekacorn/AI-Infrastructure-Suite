@@ -842,23 +842,35 @@ def _model_providers_markdown(section: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _backend_cell(backend: dict[str, Any] | None) -> str:
+    if backend is None:
+        return "self-contained"
+    detail = backend["portability"]
+    if backend["reconstruction"] is not None:
+        detail += f", {backend['reconstruction']}"
+    return f"{backend['system']} ({detail})"
+
+
 def _tools_markdown(tools: list[dict[str, Any]]) -> list[str]:
     lines = [
         "",
         "## Tools",
         "",
         "Hosting is derived from each MCP server's origin; approval is matched by",
-        "server, origin, name and definition hash. That any tool works, that a",
-        "server is self-hostable and that descriptions are benign are attested.",
+        "server, origin, name and definition hash. A vendor-only backend scores the",
+        "tool 75 or 100 whatever its MCP interface, approval or hosting. That any tool",
+        "works, that a server is self-hostable, that descriptions are benign and that",
+        "each declared backend is accurate are attested.",
         "0 is not reachable: the scanner runs no tool.",
         "",
-        "| Tool | Server | Transport | Hosting | Portability | Approval | Lock-in |",
-        "|---|---|---|---|---|---|---:|",
+        "| Tool | Server | Transport | Hosting | Portability | Backend | Approval | Lock-in |",
+        "|---|---|---|---|---|---|---|---:|",
     ]
     for tool in tools:
         lines.append(
             f"| {tool['tool_id']} | {tool['server_id']} | {tool['transport']} | "
-            f"{tool['hosting']} | {tool['portability']} | {tool['approval']} | {tool['score']} |"
+            f"{tool['hosting']} | {tool['portability']} | {_backend_cell(tool['backend'])} | "
+            f"{tool['approval']} | {tool['score']} |"
         )
     lines.append("")
     lines.extend(f"- {tool['tool_id']}: {tool['reason']}" for tool in tools)

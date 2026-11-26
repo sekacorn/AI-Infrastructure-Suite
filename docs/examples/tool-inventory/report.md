@@ -1,7 +1,7 @@
 # Vendor exit evidence
 
 Suite 0.2.0b3 | Rubric 2
-Manifest SHA-256: `fd70decdaff77a75fa9f9e1a1f7a7dd513e3c52306f491cfa0078df88603a014`
+Manifest SHA-256: `1a1a8d653eadc249b13b88508584c93f782281412140dff14ae6ab2cc11c24e0`
 
 Contract terms are operator-attested. This report is not legal advice.
 
@@ -14,7 +14,7 @@ Contract terms are operator-attested. This report is not legal advice.
 | memory | 100 | unverified | No evidence supplied. | - |
 | audit_history | 100 | unverified | No evidence supplied. | - |
 | cost_history | 100 | unverified | No evidence supplied. | - |
-| tool_connectors | 75 | verified (tool inventory) | Worst of 4 tool(s): billing_export scores 75. Vendor-only tool with a documented reconstruction path (attested). 1 approval(s) name tools the inventory does not list. Attested, not re-run: that the inventory lists every tool, that any tool works, that an MCP server is self-hostable, that a documented reconstruction path works, that tool descriptions are benign. | `tool-inventory.json` (`1b9d30300103043f7337fcb80e6a2c9b0912ff2fbf05181f5700405d1d091bbb`) |
+| tool_connectors | 75 | verified (tool inventory) | Worst of 4 tool(s): crm__lookup scores 75. The tool depends on vendor-only service crm-vendor-api, with a documented reconstruction path (attested). Its MCP interface, approval and hosting do not change this. 1 approval(s) name tools the inventory does not list. Attested, not re-run: that the inventory lists every tool, that any tool works, that an MCP server is self-hostable, that a documented reconstruction path works, that tool descriptions are benign, that each tool's declared backend is accurate. | `tool-inventory.json` (`2bcf3a80ef4b55119b9b7259dd7bcb3e0d83a40f4b05c8e85b7a4de3f3c4240e`) |
 | identities | 100 | unverified | No evidence supplied. | - |
 | ontology | 100 | unverified | No evidence supplied. | - |
 | contract_terms | 100 | unverified | No evidence supplied. | - |
@@ -23,21 +23,23 @@ Contract terms are operator-attested. This report is not legal advice.
 ## Tools
 
 Hosting is derived from each MCP server's origin; approval is matched by
-server, origin, name and definition hash. That any tool works, that a
-server is self-hostable and that descriptions are benign are attested.
+server, origin, name and definition hash. A vendor-only backend scores the
+tool 75 or 100 whatever its MCP interface, approval or hosting. That any tool
+works, that a server is self-hostable, that descriptions are benign and that
+each declared backend is accurate are attested.
 0 is not reachable: the scanner runs no tool.
 
-| Tool | Server | Transport | Hosting | Portability | Approval | Lock-in |
-|---|---|---|---|---|---|---:|
-| files__search | files | mcp_streamable_http | local | mcp | approved | 25 |
-| files__count | files | mcp_streamable_http | local | mcp | approved | 25 |
-| crm__lookup | crm | mcp_streamable_http | hosted | mcp | approved | 50 |
-| billing_export | billing | in_process | local | vendor_only | not_applicable | 75 |
+| Tool | Server | Transport | Hosting | Portability | Backend | Approval | Lock-in |
+|---|---|---|---|---|---|---|---:|
+| files__search | files | mcp_streamable_http | local | mcp | self-contained | approved | 25 |
+| files__count | files | mcp_streamable_http | local | mcp | self-contained | approved | 25 |
+| crm__lookup | crm | mcp_streamable_http | hosted | mcp | crm-vendor-api (vendor_only, documented) | approved | 75 |
+| billing_export | billing | in_process | local | vendor_only | billing-saas (vendor_only, documented) | not_applicable | 75 |
 
 - files__search: MCP tool with an approved definition hash on a local mcp_streamable_http server.
 - files__count: MCP tool with an approved definition hash on a local mcp_streamable_http server.
-- crm__lookup: MCP tool; not 25 because its MCP server is hosted (derived from the origin).
-- billing_export: Vendor-only tool with a documented reconstruction path (attested).
+- crm__lookup: The tool depends on vendor-only service crm-vendor-api, with a documented reconstruction path (attested). Its MCP interface, approval and hosting do not change this.
+- billing_export: The tool depends on vendor-only service billing-saas, with a documented reconstruction path (attested).
 
 ## Installed components
 

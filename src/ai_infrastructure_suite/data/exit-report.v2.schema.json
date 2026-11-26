@@ -1703,7 +1703,8 @@
                   "that any tool works",
                   "that an MCP server is self-hostable",
                   "that a documented reconstruction path works",
-                  "that tool descriptions are benign"
+                  "that tool descriptions are benign",
+                  "that each tool's declared backend is accurate"
                 ]
               }
             },
@@ -1748,6 +1749,7 @@
         "portability",
         "reconstruction",
         "definition_sha256",
+        "backend",
         "approval",
         "score",
         "reason"
@@ -1832,6 +1834,41 @@
         },
         "reason": {
           "type": "string"
+        },
+        "backend": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "system",
+                "portability",
+                "reconstruction"
+              ],
+              "properties": {
+                "system": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$"
+                },
+                "portability": {
+                  "enum": [
+                    "vendor_only",
+                    "mcp"
+                  ]
+                },
+                "reconstruction": {
+                  "enum": [
+                    "documented",
+                    "none",
+                    null
+                  ]
+                }
+              }
+            }
+          ]
         }
       }
     }
