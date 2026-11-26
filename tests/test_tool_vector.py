@@ -558,3 +558,60 @@ def test_no_backend_combination_reaches_zero_or_25_when_vendor_only() -> None:
         if tool.backend is not None and tool.backend.portability == "vendor_only":
             assert row["score"] in (75, 100)
         assert row["score"] != 0
+
+
+# --- mcp-servers.v1 backend declarations ------------------------------------------------------
+
+
+def _servers_document(server: dict[str, Any]) -> dict[str, Any]:
+    return {"schema_version": "mcp-servers.v1", "servers": [server]}
+
+
+@pytest.mark.parametrize(
+    "backend",
+    [
+        "self-contained",
+        {"system": "crm-vendor-api", "portability": "vendor_only", "reconstruction": "none"},
+        {"system": "postgres", "portability": "mcp"},
+    ],
+)
+def test_servers_declare_a_backend(backend: Any) -> None:
+    server = {"server_id": "x", "transport": "stdio", "command": "c", "backend": backend}
+    jsonschema.validate(_servers_document(server), _schema("mcp-servers.schema.json"))
+
+
+@pytest.mark.parametrize(
+    "server",
+    [
+        {"server_id": "x", "transport": "stdio", "command": "c"},
+        {"server_id": "x", "transport": "stdio", "command": "c", "backend": "none"},
+        {
+            "server_id": "x",
+            "transport": "stdio",
+            "command": "c",
+            "backend": {"system": "v", "portability": "vendor_only"},
+        },
+        {
+            "server_id": "x",
+            "transport": "stdio",
+            "command": "c",
+            "backend": {"system": "v", "portability": "mcp", "reconstruction": "none"},
+        },
+        {
+            "server_id": "x",
+            "transport": "stdio",
+            "command": "c",
+            "backend": {"system": "https://api.example.com", "portability": "mcp"},
+        },
+        {
+            "server_id": "x",
+            "transport": "stdio",
+            "command": "c",
+            "backend": "self-contained",
+            "tool_backends": {"t": {"system": "v", "portability": "vendor_only"}},
+        },
+    ],
+)
+def test_server_backend_declarations_are_checked(server: dict[str, Any]) -> None:
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate(_servers_document(server), _schema("mcp-servers.schema.json"))

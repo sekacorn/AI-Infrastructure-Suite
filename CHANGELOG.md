@@ -38,6 +38,7 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
   - The report's `tools` rows and markdown table show the backend.
   - The field was added before `tool-inventory.v1` was first released, so no
     released reader or writer changes.
+- **`mcp-servers.v1` declares backends.** Every server must declare `backend`, either `"self-contained"` or the service its tools depend on (`{system, portability, reconstruction}`). Optional `tool_backends` overrides it per tool. AgentForge writes these into `tool-inventory.v1`. The format has not been released.
 - **Canonical schemas for AgentForge's MCP formats**: `tool-approvals.v1`
   (with a reader, used for scoring), `mcp-servers.v1` and `tool-definition.v1`,
   with fixtures in `docs/examples/mcp-tools/`. AgentForge's `suite-contract`
