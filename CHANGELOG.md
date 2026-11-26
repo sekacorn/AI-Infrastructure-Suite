@@ -8,6 +8,16 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.2.0b3] - 2026-11-25
+
+Phase 4a, the reader side of portable memory: the `memory` vector can now be
+scored from an `agent-memory.v1` export (`memory_inventory`), with a new
+verification level, `verified (memory export)`. It is released before
+agentforge-oss 0.5.9, the first writer, so readers ship before writers. The
+eleven other vectors, their scores and the report shape are unchanged; a report
+that does not use `memory_inventory` still validates against 0.2.0b2's schema.
+No component floor changes.
+
 ### Added
 - **The `memory` vector scores `memory_inventory`** (Phase 4a, checkpoint 2):
   an `agent-memory.v1` export, optionally with the `agent-memory-import.v1` a
