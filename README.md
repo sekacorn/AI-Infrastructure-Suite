@@ -115,7 +115,32 @@ Use the metapackage when you want one coherent, version-checked environment. Use
 
 ## CLI
 
-Run `ai-suite exit-report docs/examples/exit-report/manifest.json` to inventory a project's vendor-exit evidence. Add `--json` for machine-readable output. For a Linux of AI `restore-summary.v1`, add `--verify-restores` to rebuild and recheck the deterministic fake profiles locally; results verified that way are labelled `verified (fake profiles)` because the profiles are offline fakes, not a real vendor restore. The `embeddings` vector can instead declare an `embedding-portability.v1` inventory, which is scored from retained source text, vector digests and coverage without calling an embedding API; the declared model's availability, weight digest and license stay operator-attested and are never re-run. Rubric 2 adds a twelfth vector, `model_providers`, scored from a `provider-inventory.v1` and any benchmark evidence of tested alternatives; 0 is unreachable there because the suite never runs a model. The offline report checks referenced file digests and lists installed components. [Rubric and example outputs](docs/exit-report.md).
+### Vendor exit report
+
+`ai-suite exit-report MANIFEST [--json]` scores how hard it would be to leave
+each AI vendor, on **12 vectors**: policies, prompts, embeddings, fine-tunes,
+memory, audit history, cost history, tool connectors, identities, ontology,
+contract terms and model providers. Each scores 0 (most portable) to 100 (most
+locked, or no evidence). Every row says which checks the scanner re-ran
+itself (`verification_level`) and which claims stay operator-attested.
+
+The suite is diagnostics only: it never runs a model or embeds text with one.
+
+| Vector | Evidence the scanner can verify itself |
+|---|---|
+| any | a referenced file's SHA-256 (`attested`) |
+| several | a restore summary, rebuilt against deterministic offline fake profiles (`--verify-restores`, `verified (fake profiles)`); never a real vendor restore |
+| `embeddings` | an `embedding-portability.v1` inventory: retained source text, vector digests, coverage (`verified (local evidence)`); a re-embed record's sample is recomputed and judged by **neighborhood agreement** against operator-declared thresholds, never as search quality |
+| `model_providers` | a `provider-inventory.v1`, with hosting derived from each endpoint, plus benchmark arithmetic for tested alternatives; never reaches 0 |
+| `memory` | an `agent-memory.v1` export and its import report (`verified (memory export)`); never reaches 0 |
+| `tool_connectors` | a `tool-inventory.v1` and the operator's `tool-approvals.v1` (`verified (tool inventory)`): hosting derived from each MCP server's origin, approval matched by definition hash, and a vendor-only backend scoring 75 or 100 whatever its MCP interface; never reaches 0 |
+| `ontology` | a JSON-LD export (OpenOntologyLite envelope), round-tripped (`verified`) |
+| `contract_terms` | always `attested`; the report is not legal advice |
+
+See [docs/exit-report.md](docs/exit-report.md) for the rubric, the verification
+vocabulary and worked examples.
+
+### Other commands
 
 ```bash
 ai-suite info             # what this is, extras, next steps
@@ -140,9 +165,9 @@ ai-suite manifest         # emit the ecosystem manifest as JSON
 ┌──────────────────┬──────────────────┬────────────────────┬────────────────┬──────────────┬─────────────────┬───────────┬──────────┐
 │ Component        │ Distribution     │ Import             │ CLI            │ Layer        │ Supported range │ Installed │ Status   │
 ├──────────────────┼──────────────────┼────────────────────┼────────────────┼──────────────┼─────────────────┼───────────┼──────────┤
-│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.6,<0.6.0  │ 0.5.6     │ ok       │
+│ AgentForge       │ agentforge-oss   │ forge              │ forge          │ core         │ >=0.5.6,<0.6.0  │ 0.5.9     │ ok       │
 │ AgentPolicyPack  │ agentpolicypack  │ agent_policy_pack  │ agentpolicy    │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
-│ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
+│ AIAuditLog       │ aiauditlog       │ ai_audit_log       │ aiaudit        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b2   │ ok       │
 │ AIMeter          │ aimeter-oss      │ ai_meter           │ aimeter        │ core         │ >=0.2.0b1,<0.3.0│ 0.2.0b1   │ ok       │
 │ ModelSwapBench   │ modelswapbench   │ model_swap_bench   │ modelswapbench │ benchmarking │ >=0.1.0b5,<0.2.0│ -         │ optional │
 │ OpenOntologyLite │ openontologylite │ open_ontology_lite │ openontology   │ core         │ >=0.2.0b3,<0.3.0│ 0.2.0b3   │ ok       │
@@ -158,7 +183,7 @@ Each component gets five independently classified checks — install, import, AP
 ┌──────────────────┬───────────┬──────────┬─────────────┬─────────────┬─────────────┬──────────┐
 │ Component        │ Installed │ Install  │ Import      │ API         │ CLI         │ Status   │
 ├──────────────────┼───────────┼──────────┼─────────────┼─────────────┼─────────────┼──────────┤
-│ AgentForge       │ 0.5.4     │ ok       │ ok          │ ok          │ ok          │ ok       │
+│ AgentForge       │ 0.5.9     │ ok       │ ok          │ ok          │ ok          │ ok       │
 │ AgentPolicyPack  │ 0.2.0b1   │ ok       │ ok          │ ok          │ ok          │ ok       │
 │ ModelSwapBench   │ -         │ optional │ not_checked │ not_checked │ not_checked │ optional │
 └──────────────────┴───────────┴──────────┴─────────────┴─────────────┴─────────────┴──────────┘
@@ -290,7 +315,7 @@ The manifest records `latest_published_version` alongside `minimum_version` so y
 
 Stated plainly, because an installer that overstates what it verified is worse than none:
 
-- **Beta, not 1.0.** All seven components have reached Beta, and this metapackage has a published `0.1.0b` Beta line. APIs, schemas, and version ranges may still change before 1.0.
+- **Beta, not 1.0.** All seven components have reached Beta, and this metapackage has a published `0.2.0b` Beta line. APIs, schemas, and version ranges may still change before 1.0.
 - **Installed does not mean working.** The import layer proves a module loads and exposes its expected names, not that any workflow succeeds.
 - **The CLI layer reads metadata only.** A registered console script that crashes on startup still reports `ok` — nothing is executed.
 - **Live runtime integration is never tested here.** See the table above.
@@ -314,6 +339,8 @@ The diagnostics are built to be safe to run and safe to paste into an issue:
 
 **One honest tradeoff:** verifying that a component imports means running `import`, which executes that package's import-time code. That is the only way to distinguish "installed" from "actually usable". Pass `--no-imports` to restrict checks to installed metadata. See [docs/security.md](docs/security.md).
 
+**Advisories.** No security advisories have been published for `ai-infrastructure-suite`. Report a vulnerability as described in [SECURITY.md](SECURITY.md); published advisories appear at [github.com/sekacorn/AI-Infrastructure-Suite/security/advisories](https://github.com/sekacorn/AI-Infrastructure-Suite/security/advisories). Advisories for the components are linked from their own READMEs.
+
 ---
 
 ## Documentation
@@ -325,9 +352,11 @@ The diagnostics are built to be safe to run and safe to paste into an issue:
 - [docs/compatibility.md](docs/compatibility.md) — the five layers and their limits
 - [docs/architecture.md](docs/architecture.md) — how the suite is built and why
 - [docs/release-policy.md](docs/release-policy.md) — version ranges and release process
-- [docs/re-embed-record.md](docs/re-embed-record.md) — the re-embed record format and its quality block
-- [docs/provider-inventory.md](docs/provider-inventory.md) — the provider inventory format, read for the coming `model_providers` vector
-- [docs/agent-memory.md](docs/agent-memory.md) — the portable agent-memory format, read for the coming `memory` evidence state
+- [docs/exit-report.md](docs/exit-report.md) — the vendor exit report: 12 vectors, rubric, verification vocabulary
+- [docs/re-embed-record.md](docs/re-embed-record.md) — the re-embed record format and its neighborhood-agreement block
+- [docs/provider-inventory.md](docs/provider-inventory.md) — the provider inventory format, scored on the `model_providers` vector
+- [docs/agent-memory.md](docs/agent-memory.md) — the portable agent-memory format, scored on the `memory` vector
+- [docs/tool-inventory.md](docs/tool-inventory.md) — the tool inventory and the canonical MCP formats, scored on the `tool_connectors` vector
 - [docs/model-swap-evidence.md](docs/model-swap-evidence.md) — benchmark evidence of a tested alternative, and how its verdict is recomputed
 - [docs/security.md](docs/security.md) — threat model and output guarantees
 
