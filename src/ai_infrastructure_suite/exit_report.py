@@ -437,6 +437,7 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
     rows: dict[str, dict[str, Any]] = {}
     model_providers: dict[str, Any] | None = None
     memory_stores: list[dict[str, Any]] | None = None
+    tools: list[dict[str, Any]] | None = None
     restore_cache: dict[tuple[str, str], Any] = {}
     restore_profiles: dict[tuple[str, str, str, int], dict[str, Any]] = {}
     # Resolve restore summaries before any row is built. The embeddings vector
@@ -481,6 +482,13 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
 
             memory = build_memory_vector(manifest.parent, entries[vector])
             rows[vector], memory_stores = memory.row, memory.section
+        elif isinstance(entries[vector], dict) and entries[vector].get("state") == "tool_inventory":
+            if vector != "tool_connectors":
+                raise ValueError("Only the tool_connectors vector accepts a tool inventory.")
+            from ai_infrastructure_suite.tool_vector import build_vector as build_tool_vector
+
+            tool_result = build_tool_vector(manifest.parent, entries[vector])
+            rows[vector], tools = tool_result.row, tool_result.section
         elif isinstance(entries[vector], dict) and entries[vector].get("state") == "restore_tested":
             reference = _reference(manifest.parent, entries[vector])
             if not verify_restores:
@@ -568,6 +576,8 @@ def build_exit_report(manifest: Path, *, verify_restores: bool = False) -> dict[
         report["model_providers"] = model_providers
     if memory_stores is not None:
         report["memory_stores"] = memory_stores
+    if tools is not None:
+        report["tools"] = tools
     return report
 
 
@@ -769,6 +779,8 @@ def render_markdown(report: dict[str, Any]) -> str:
         lines.extend(_model_providers_markdown(report["model_providers"]))
     if "memory_stores" in report:
         lines.extend(_memory_markdown(report["memory_stores"]))
+    if "tools" in report:
+        lines.extend(_tools_markdown(report["tools"]))
     lines.extend(["", "## Installed components", ""])
     for name, item in report["components"].items():
         version = item["version"] or "absent"
@@ -827,6 +839,29 @@ def _model_providers_markdown(section: dict[str, Any]) -> list[str]:
                 f"{row['candidate_provider_kind']}:{_cell(row['candidate_model'])} | "
                 f"{row['candidate_hosting']} | {row['sample_count']} | {accepted} |"
             )
+    return lines
+
+
+def _tools_markdown(tools: list[dict[str, Any]]) -> list[str]:
+    lines = [
+        "",
+        "## Tools",
+        "",
+        "Hosting is derived from each MCP server's origin; approval is matched by",
+        "server, origin, name and definition hash. That any tool works, that a",
+        "server is self-hostable and that descriptions are benign are attested.",
+        "0 is not reachable: the scanner runs no tool.",
+        "",
+        "| Tool | Server | Transport | Hosting | Portability | Approval | Lock-in |",
+        "|---|---|---|---|---|---|---:|",
+    ]
+    for tool in tools:
+        lines.append(
+            f"| {tool['tool_id']} | {tool['server_id']} | {tool['transport']} | "
+            f"{tool['hosting']} | {tool['portability']} | {tool['approval']} | {tool['score']} |"
+        )
+    lines.append("")
+    lines.extend(f"- {tool['tool_id']}: {tool['reason']}" for tool in tools)
     return lines
 
 

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sekacorn/ai-infrastructure-suite/schemas/tool-inventory.schema.json",
+  "title": "tool-inventory.v1",
+  "description": "The tools an agent system can call, for the tool_connectors lock-in vector. MCP tools carry the definition hash an approval pins (SHA-256 of the RFC 8785 canonical JSON of {server_id, name, description, inputSchema, outputSchema, annotations}); vendor-only tools say whether a reconstruction path is documented. Cross-field rules (uniqueness of tool_id, of (server_id, name) and of definition_sha256; canonical origins) are enforced by the reader.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_by", "tools"],
+  "properties": {
+    "schema_version": { "const": "tool-inventory.v1" },
+    "generated_by": {
+      "description": "A producer string. Not trusted.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "version"],
+      "properties": {
+        "tool": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "version": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "tools": {
+      "description": "At least one tool. A system with no tools declares the vector inapplicable instead.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": { "$ref": "#/$defs/tool" }
+    }
+  },
+  "$defs": {
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_id",
+        "name",
+        "server_id",
+        "transport",
+        "server_origin",
+        "definition_sha256",
+        "portability",
+        "reconstruction"
+      ],
+      "properties": {
+        "tool_id": {
+          "description": "The name a model sees, unique in the inventory.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "name": {
+          "description": "The tool's name on its server.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_./-]{1,128}$"
+        },
+        "server_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$" },
+        "transport": { "enum": ["in_process", "mcp_stdio", "mcp_streamable_http"] },
+        "server_origin": {
+          "description": "scheme://host[:port], lowercase, for mcp_streamable_http; null otherwise. Never a path, query, fragment or credentials. Hosting is derived from it by the scanner, never declared.",
+          "oneOf": [
+            { "type": "string", "maxLength": 256, "pattern": "^https?://[^/?#@ ]+$" },
+            { "type": "null" }
+          ]
+        },
+        "definition_sha256": {
+          "description": "Required for an MCP tool; null for a vendor-only tool.",
+          "oneOf": [{ "type": "string", "pattern": "^[0-9a-f]{64}$" }, { "type": "null" }]
+        },
+        "portability": { "enum": ["mcp", "vendor_only"] },
+        "reconstruction": {
+          "description": "null for an MCP tool; documented or none for a vendor-only tool.",
+          "enum": ["documented", "none", null]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "transport": { "const": "mcp_streamable_http" } } },
+          "then": { "properties": { "server_origin": { "type": "string" } } },
+          "else": { "properties": { "server_origin": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "portability": { "const": "mcp" } } },
+          "then": {
+            "properties": {
+              "definition_sha256": { "type": "string" },
+              "reconstruction": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "transport": { "const": "in_process" },
+              "definition_sha256": { "type": "null" },
+              "reconstruction": { "enum": ["documented", "none"] }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

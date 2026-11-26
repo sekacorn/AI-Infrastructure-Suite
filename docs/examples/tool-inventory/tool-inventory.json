@@ -1,0 +1,49 @@
+{
+  "schema_version": "tool-inventory.v1",
+  "generated_by": {
+    "tool": "agentforge-oss",
+    "version": "0.5.10"
+  },
+  "tools": [
+    {
+      "tool_id": "files__search",
+      "name": "search",
+      "server_id": "files",
+      "transport": "mcp_streamable_http",
+      "server_origin": "http://127.0.0.1:8765",
+      "definition_sha256": "0fd51c430bff67af9f809eb8d94565f0db9b3a2dc283b09c8120d2baeec31a35",
+      "portability": "mcp",
+      "reconstruction": null
+    },
+    {
+      "tool_id": "files__count",
+      "name": "count",
+      "server_id": "files",
+      "transport": "mcp_streamable_http",
+      "server_origin": "http://127.0.0.1:8765",
+      "definition_sha256": "af9c373da6577b859d5aee5656111d3ebb0a3139053f576fec5dedd04302417d",
+      "portability": "mcp",
+      "reconstruction": null
+    },
+    {
+      "tool_id": "crm__lookup",
+      "name": "lookup",
+      "server_id": "crm",
+      "transport": "mcp_streamable_http",
+      "server_origin": "https://mcp.crm.example.com",
+      "definition_sha256": "4a72ea08cec590f9609a25efdd2011d212b31162d3a94c30706c65ed749fc5a6",
+      "portability": "mcp",
+      "reconstruction": null
+    },
+    {
+      "tool_id": "billing_export",
+      "name": "billing_export",
+      "server_id": "billing",
+      "transport": "in_process",
+      "server_origin": null,
+      "definition_sha256": null,
+      "portability": "vendor_only",
+      "reconstruction": "documented"
+    }
+  ]
+}

@@ -59,6 +59,9 @@
         },
         "model_providers": {
           "$ref": "#/$defs/model_providers_vector"
+        },
+        "tool_connectors": {
+          "$ref": "#/$defs/tool_connectors_vector"
         }
       }
     },
@@ -189,6 +192,15 @@
       "maxItems": 64,
       "items": {
         "$ref": "#/$defs/memory_store"
+      }
+    },
+    "tools": {
+      "description": "Present only when the tool_connectors vector declares tool_inventory. Absent otherwise, so such reports also validate against suite 0.2.0b3's schema.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/tool"
       }
     }
   },
@@ -1629,6 +1641,194 @@
         },
         "verification_level": {
           "const": "verified (memory export)"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "tool_connectors_vector": {
+      "description": "The tool_connectors row. Either any generic state, or tool_inventory scored by the scanner from a tool-inventory.v1 document. tool_inventory never reaches 0.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/vector"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "score",
+            "verification_level",
+            "reason",
+            "path",
+            "sha256",
+            "attested_claims",
+            "stale_approvals"
+          ],
+          "properties": {
+            "state": {
+              "const": "tool_inventory"
+            },
+            "score": {
+              "enum": [
+                25,
+                50,
+                75,
+                100
+              ]
+            },
+            "verification_level": {
+              "const": "verified (tool inventory)"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string",
+              "maxLength": 240,
+              "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "attested_claims": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "that the inventory lists every tool",
+                  "that any tool works",
+                  "that an MCP server is self-hostable",
+                  "that a documented reconstruction path works",
+                  "that tool descriptions are benign"
+                ]
+              }
+            },
+            "stale_approvals": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4096
+            },
+            "approvals": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "maxLength": 240,
+                  "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_id",
+        "server_id",
+        "name",
+        "transport",
+        "server_origin",
+        "hosting",
+        "portability",
+        "reconstruction",
+        "definition_sha256",
+        "approval",
+        "score",
+        "reason"
+      ],
+      "properties": {
+        "tool_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,64}$"
+        },
+        "server_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{0,31}$"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_./-]{1,128}$"
+        },
+        "transport": {
+          "enum": [
+            "in_process",
+            "mcp_stdio",
+            "mcp_streamable_http"
+          ]
+        },
+        "server_origin": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hosting": {
+          "description": "Derived by the scanner from server_origin; stdio and in-process are local.",
+          "enum": [
+            "local",
+            "hosted"
+          ]
+        },
+        "portability": {
+          "enum": [
+            "mcp",
+            "vendor_only"
+          ]
+        },
+        "reconstruction": {
+          "enum": [
+            "documented",
+            "none",
+            null
+          ]
+        },
+        "definition_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "approval": {
+          "enum": [
+            "approved",
+            "not_approved",
+            "no_approvals_file",
+            "not_applicable"
+          ]
+        },
+        "score": {
+          "enum": [
+            25,
+            50,
+            75,
+            100
+          ]
         },
         "reason": {
           "type": "string"

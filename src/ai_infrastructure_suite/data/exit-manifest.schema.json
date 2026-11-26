@@ -247,6 +247,109 @@
        ]
       }
      }
+    },
+    "tool_connectors": {
+     "oneOf": [
+      {
+       "type": "object",
+       "properties": {
+        "state": {
+         "enum": [
+          "restore_tested",
+          "importer_validated",
+          "exported",
+          "reconstruction",
+          "non_exportable",
+          "inapplicable",
+          "attested",
+          "embedding_inventory"
+         ]
+        },
+        "path": {
+         "type": "string",
+         "maxLength": 240,
+         "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+        },
+        "sha256": {
+         "type": "string",
+         "pattern": "^[0-9a-f]{64}$"
+        },
+        "re_embed_records": {
+         "description": "Optional re-embed-record.v1 documents describing rebuilds of stores in this vector's evidence. Only meaningful on the embeddings vector. Each record must bind to that evidence by digest and store_id or it is refused.",
+         "type": "array",
+         "maxItems": 64,
+         "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+           "path",
+           "sha256"
+          ],
+          "properties": {
+           "path": {
+            "type": "string",
+            "maxLength": 240,
+            "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+           },
+           "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+           }
+          }
+         }
+        }
+       },
+       "required": [
+        "state",
+        "path",
+        "sha256"
+       ],
+       "additionalProperties": false
+      },
+      {
+       "description": "A tool-inventory.v1 document, scored by the scanner. Optional approvals: the tool-approvals.v1 file the operator committed, bound by digest. Suite 0.2.0b3 and earlier refuse this state.",
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "state",
+        "path",
+        "sha256"
+       ],
+       "properties": {
+        "state": {
+         "const": "tool_inventory"
+        },
+        "path": {
+         "type": "string",
+         "maxLength": 240,
+         "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+        },
+        "sha256": {
+         "type": "string",
+         "pattern": "^[0-9a-f]{64}$"
+        },
+        "approvals": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "path",
+          "sha256"
+         ],
+         "properties": {
+          "path": {
+           "type": "string",
+           "maxLength": 240,
+           "pattern": "^[a-zA-Z0-9_][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_][a-zA-Z0-9_.-]*)*$"
+          },
+          "sha256": {
+           "type": "string",
+           "pattern": "^[0-9a-f]{64}$"
+          }
+         }
+        }
+       }
+      }
+     ]
     }
    }
   }
