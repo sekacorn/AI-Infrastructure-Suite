@@ -16,7 +16,11 @@ AI Infrastructure Suite is Beta software. Security fixes are applied to the late
 
 ## Reporting a vulnerability
 
-Open a **private security advisory** on the [repository](https://github.com/sekacorn/AI-Infrastructure-Suite/security/advisories). Please do not open a public issue for a suspected vulnerability.
+Report a suspected vulnerability privately with **Report a vulnerability** on the repository's
+[Security tab](https://github.com/sekacorn/AI-Infrastructure-Suite/security) (direct link: [github.com/sekacorn/AI-Infrastructure-Suite/security/advisories/new](https://github.com/sekacorn/AI-Infrastructure-Suite/security/advisories/new)).
+This is GitHub's private vulnerability reporting: the report stays private between you and the
+maintainers until an advisory is published.
+Please do not open a public issue for a suspected vulnerability.
 
 Include the affected version, reproduction steps, and the impact you observed. `ai-suite doctor --json` output is designed to be safe to attach — it contains no paths, credentials, or environment variables.
 
