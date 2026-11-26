@@ -179,9 +179,11 @@ still validates against 0.2.0b3's schema.
 - that any tool works;
 - that an MCP server is self-hostable;
 - that a documented reconstruction path works;
-- that tool descriptions are benign.
+- that tool descriptions are benign;
+- that each tool's declared `backend` is accurate (always listed).
 
-The scanner never sees a tool definition, so it cannot recompute a hash.
+The scanner never sees a tool definition, so it cannot recompute a hash, and
+it cannot see behind a tool to check what service it depends on.
 
 | Per tool | Score |
 |---|---:|
@@ -189,13 +191,21 @@ The scanner never sees a tool definition, so it cannot recompute a hash.
 | An MCP tool whose server is hosted, or whose hash is not approved (or no approvals file was supplied); the reason names which | 50 |
 | A vendor-only tool with a documented reconstruction path | 75 |
 | A vendor-only tool with no reconstruction path | 100 |
+| **Any tool whose `backend` is vendor-only**, whatever its MCP interface, approval or hosting | 75 (documented) or 100 (none) |
 | Invalid evidence | refused, exit code 2 |
+
+Every tool declares a `backend`: `null` when it is self-contained, or the
+external service it depends on (including a vendor API behind a third-party
+MCP server). A vendor-only backend governs: wrapping it in MCP, approving it
+or running it locally does not make it portable. When a vendor-only tool also
+has a vendor-only backend, the worse reconstruction governs.
 
 The worst tool sets the vector. **Nothing reaches 0**: the scanner runs no
 tool, and 0 is never given on attested evidence. Per-tool detail is in the
 report's `tools` section. The
 [worked example](examples/tool-inventory/manifest.json) scores 75: its
-vendor-only tool governs, its hosted MCP tool scores 50, and one approval is
+approved MCP tool `crm__lookup` wraps a vendor-only CRM API and so scores 75,
+not 25 or 50; its vendor-only billing tool also scores 75; and one approval is
 stale.
 
 ## Verification vocabulary
@@ -210,7 +220,7 @@ stale.
 | `verified (local evidence + fake profiles)` | Both of the two rows above, and the restore it re-ran names this store and commits to this evidence document's exact digest. | The same attested model claims. A drifted profile withholds this level. | `embeddings`, as an inventory |
 | `verified (benchmark arithmetic)` | Derived each endpoint's hosting itself, bound each benchmark document to an inventory provider and model by digest, and recomputed acceptance and feature coverage from the document's numbers. | That any model was run, that a single measurement is real, or that the alternative works in production. | `model_providers` |
 | `verified (memory export)` | Read the agent-memory export and every shard against their digests, re-hashed every item, round-tripped every item canonically, checked counts and tombstones, bound items to linked vectors by digest, and bound any import report to this export. | That the export is complete, that deletions happened, that redaction was adequate, or that any import ran. See `attested_claims`. | `memory`, as an inventory |
-| `verified (tool inventory)` | Read the tool inventory against its digest, checked its schema rules, bounds and canonical origins, derived each MCP server's hosting from its origin, and matched each MCP tool to the approvals file by server, origin, name and hash. | That the inventory is complete, that any tool works, that a server is self-hostable, that a reconstruction path works, or that descriptions are benign. See `attested_claims`. | `tool_connectors`, as an inventory |
+| `verified (tool inventory)` | Read the tool inventory against its digest, checked its schema rules, bounds and canonical origins, derived each MCP server's hosting from its origin, and matched each MCP tool to the approvals file by server, origin, name and hash. | That the inventory is complete, that any tool works, that a server is self-hostable, that a reconstruction path works, that descriptions are benign, or that each declared backend is accurate. See `attested_claims`. | `tool_connectors`, as an inventory |
 | `attested` | Only that an operator-supplied record exists and its bytes match the declared SHA-256. | Everything the record asserts. A producer string inside a record is not trusted, and contract terms are never more than attested. | Any vector, and `contract_terms` always |
 | `unverified` | Nothing. No evidence was supplied. | Everything. The score is the conservative 100. | Any omitted vector |
 

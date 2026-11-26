@@ -133,7 +133,7 @@ def test_the_worked_example_reproduces_its_committed_report() -> None:
     assert {t: r["score"] for t, r in _tools(report).items()} == {
         "files__search": 25,
         "files__count": 25,
-        "crm__lookup": 50,
+        "crm__lookup": 75,
         "billing_export": 75,
     }
 
@@ -141,7 +141,10 @@ def test_the_worked_example_reproduces_its_committed_report() -> None:
 def test_the_worked_example_renders_the_tools_section() -> None:
     markdown = render_markdown(build_exit_report(WORKED / "manifest.json"))
     assert "## Tools" in markdown
-    assert "| crm__lookup | crm | mcp_streamable_http | hosted | mcp | approved | 50 |" in markdown
+    assert (
+        "| crm__lookup | crm | mcp_streamable_http | hosted | mcp "
+        "| crm-vendor-api (vendor_only, documented) | approved | 75 |"
+    ) in markdown
 
 
 def test_the_worked_example_digests_match_the_checked_out_bytes() -> None:
@@ -224,6 +227,7 @@ def test_an_approval_for_another_origin_does_not_apply(tmp_path: Path) -> None:
 def test_hosted_and_unapproved_reasons_name_both(tmp_path: Path) -> None:
     scenario = Scenario(tmp_path)
     scenario.only("crm__lookup")
+    scenario.tool("crm__lookup")["backend"] = None  # isolate the MCP rules
     scenario.tool("crm__lookup")["definition_sha256"] = "c" * 64
     tool = _tools(scenario.run())["crm__lookup"]
     assert tool["score"] == 50 and tool["hosting"] == "hosted"
@@ -233,6 +237,7 @@ def test_hosted_and_unapproved_reasons_name_both(tmp_path: Path) -> None:
 def test_hosting_is_derived_never_declared(tmp_path: Path) -> None:
     scenario = Scenario(tmp_path)
     scenario.only("crm__lookup")
+    scenario.tool("crm__lookup")["backend"] = None  # isolate the MCP rules
     scenario.tool("crm__lookup")["server_origin"] = "http://10.1.2.3:8080"
     scenario.approvals["approvals"][0]["server_origin"] = "http://10.1.2.3:8080"  # type: ignore[index]
     tool = _tools(scenario.run())["crm__lookup"]
@@ -250,6 +255,7 @@ def test_stdio_and_in_process_mcp_servers_are_local(tmp_path: Path) -> None:
 def test_vendor_only_tools_score_75_or_100(tmp_path: Path) -> None:
     scenario = Scenario(tmp_path)
     scenario.only("billing_export")
+    scenario.tool("billing_export")["backend"] = None  # the tool's own reconstruction only
     assert _row(scenario.run())["score"] == 75
     scenario.tool("billing_export")["reconstruction"] = "none"
     row = _row(scenario.run())
@@ -380,6 +386,46 @@ INVALID_INVENTORIES: list[tuple[str, Any, str]] = [
     ),
     ("transport", lambda d: d["tools"][0].update(transport="sse"), "unknown transport"),
     ("portability", lambda d: d["tools"][0].update(portability="open"), "unknown portability"),
+    ("backend missing", lambda d: d["tools"][0].pop("backend"), "exactly the keys"),
+    (
+        "backend key",
+        lambda d: d["tools"][0].update(
+            backend={"system": "x", "portability": "mcp", "reconstruction": None, "url": "u"}
+        ),
+        "exactly the keys",
+    ),
+    (
+        "backend system",
+        lambda d: d["tools"][0].update(
+            backend={
+                "system": "https://api.example.com",
+                "portability": "mcp",
+                "reconstruction": None,
+            }
+        ),
+        "backend system",
+    ),
+    (
+        "backend vendor reconstruction",
+        lambda d: d["tools"][0].update(
+            backend={"system": "x", "portability": "vendor_only", "reconstruction": None}
+        ),
+        "documented or none",
+    ),
+    (
+        "backend mcp reconstruction",
+        lambda d: d["tools"][0].update(
+            backend={"system": "x", "portability": "mcp", "reconstruction": "none"}
+        ),
+        "no reconstruction",
+    ),
+    (
+        "backend portability",
+        lambda d: d["tools"][0].update(
+            backend={"system": "x", "portability": "open", "reconstruction": None}
+        ),
+        "unknown portability",
+    ),
 ]
 
 
@@ -392,6 +438,12 @@ def test_invalid_inventories_are_refused(label: str, change: Any, match: str) ->
 
 
 SCHEMA_CATCHES = {
+    "backend missing",
+    "backend key",
+    "backend system",
+    "backend vendor reconstruction",
+    "backend mcp reconstruction",
+    "backend portability",
     "version",
     "extra key",
     "empty",
@@ -447,3 +499,62 @@ def test_invalid_approvals_are_refused(change: Any, match: str) -> None:
     change(document)
     with pytest.raises(ToolInventoryError, match=match):
         parse_tool_approvals(json.dumps(document).encode())
+
+
+# --- backends ------------------------------------------------------------------------------
+
+
+def test_a_vendor_only_backend_governs_an_approved_local_mcp_tool(tmp_path: Path) -> None:
+    scenario = Scenario(tmp_path)
+    scenario.only("files__search")
+    scenario.tool("files__search")["backend"] = {
+        "system": "search-saas",
+        "portability": "vendor_only",
+        "reconstruction": "none",
+    }
+    tool = _tools(scenario.run())["files__search"]
+    assert (tool["approval"], tool["hosting"], tool["score"]) == ("approved", "local", 100)
+    assert "search-saas" in tool["reason"] and "do not change this" in tool["reason"]
+    scenario.tool("files__search")["backend"]["reconstruction"] = "documented"
+    assert _tools(scenario.run())["files__search"]["score"] == 75
+
+
+def test_a_portable_backend_keeps_the_mcp_score(tmp_path: Path) -> None:
+    scenario = Scenario(tmp_path)
+    scenario.only("files__search")
+    scenario.tool("files__search")["backend"] = {
+        "system": "postgres",
+        "portability": "mcp",
+        "reconstruction": None,
+    }
+    tool = _tools(scenario.run())["files__search"]
+    assert tool["score"] == 25 and tool["backend"]["system"] == "postgres"
+
+
+def test_the_worse_reconstruction_governs_a_vendor_tool_with_a_vendor_backend(
+    tmp_path: Path,
+) -> None:
+    scenario = Scenario(tmp_path)
+    scenario.only("billing_export")
+    scenario.tool("billing_export")["backend"]["reconstruction"] = "none"
+    assert _tools(scenario.run())["billing_export"]["score"] == 100
+    scenario.tool("billing_export")["backend"] = None
+    assert _tools(scenario.run())["billing_export"]["score"] == 75
+
+
+def test_the_backend_is_always_an_attested_claim(tmp_path: Path) -> None:
+    scenario = Scenario(tmp_path)
+    scenario.only("files__search")
+    row = _row(scenario.run())
+    assert _tools(scenario.run())["files__search"]["backend"] is None
+    assert "that each tool's declared backend is accurate" in row["attested_claims"]
+
+
+def test_no_backend_combination_reaches_zero_or_25_when_vendor_only() -> None:
+    inventory = parse_tool_inventory((WORKED / "tool-inventory.json").read_bytes())
+    approvals = parse_tool_approvals((WORKED / "tool-approvals.json").read_bytes())
+    for tool in inventory.tools:
+        row = score_tool(tool, approvals)
+        if tool.backend is not None and tool.backend.portability == "vendor_only":
+            assert row["score"] in (75, 100)
+        assert row["score"] != 0

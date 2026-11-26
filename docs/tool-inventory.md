@@ -32,6 +32,17 @@ The remaining fields:
   pins, and `reconstruction: null`.
 - **`portability: vendor_only`** tools are `in_process`, with
   `definition_sha256: null` and `reconstruction` set to `documented` or `none`.
+- **`backend`** is required on every tool. It is `null` when the tool is
+  self-contained, meaning its function depends on no external service.
+  Otherwise it names that service: `{system, portability, reconstruction}`.
+  This includes a vendor API behind a third-party MCP server.
+  - `system` is an identifier, never a URL or credential.
+  - `portability` is `vendor_only` or `mcp`.
+  - `reconstruction` is `documented` or `none` for a vendor-only service, and
+    `null` for an `mcp` one.
+
+  A vendor-only backend scores the tool 75 or 100, whatever its MCP
+  interface, approval or hosting. The declaration is always attested.
 
 The reader refuses:
 - unknown or duplicate keys, and NaN;

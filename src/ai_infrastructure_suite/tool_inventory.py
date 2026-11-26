@@ -53,8 +53,11 @@ _TOOL_KEYS: Final = frozenset(
         "definition_sha256",
         "portability",
         "reconstruction",
+        "backend",
     }
 )
+_BACKEND_KEYS: Final = frozenset({"system", "portability", "reconstruction"})
+_SYSTEM: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}")
 _APPROVAL_KEYS: Final = frozenset(
     {
         "server_id",
@@ -73,6 +76,15 @@ class ToolInventoryError(ValueError):
 
 
 @dataclass(frozen=True)
+class Backend:
+    """The external service a tool's function depends on."""
+
+    system: str
+    portability: str
+    reconstruction: str | None
+
+
+@dataclass(frozen=True)
 class InventoryTool:
     tool_id: str
     name: str
@@ -82,6 +94,7 @@ class InventoryTool:
     definition_sha256: str | None
     portability: str
     reconstruction: str | None
+    backend: Backend | None
 
 
 @dataclass(frozen=True)
@@ -149,6 +162,25 @@ def _producer(value: object) -> tuple[str, str]:
     return tool, version
 
 
+def _backend(value: object, label: str) -> Backend | None:
+    """``null`` (self-contained) or the external service the tool depends on."""
+    if value is None:
+        return None
+    raw = _keys(value, _BACKEND_KEYS, f"{label} backend")
+    system = _match(raw["system"], _SYSTEM, f"{label} backend system")
+    portability = raw["portability"]
+    reconstruction = raw["reconstruction"]
+    if portability == "vendor_only":
+        if reconstruction not in RECONSTRUCTION:
+            raise _fail(f"{label}: a vendor-only backend's reconstruction is documented or none.")
+    elif portability == "mcp":
+        if reconstruction is not None:
+            raise _fail(f"{label}: an mcp backend has no reconstruction path (null).")
+    else:
+        raise _fail(f"{label} backend has an unknown portability.")
+    return Backend(system, portability, reconstruction)
+
+
 def _tool(value: object, index: int) -> InventoryTool:
     label = f"Tool {index}"
     raw = _keys(value, _TOOL_KEYS, label)
@@ -179,8 +211,9 @@ def _tool(value: object, index: int) -> InventoryTool:
             raise _fail(f"{label}: a vendor-only tool has no definition hash (null).")
         if reconstruction not in RECONSTRUCTION:
             raise _fail(f"{label}: a vendor-only tool's reconstruction is documented or none.")
+    backend = _backend(raw["backend"], label)
     return InventoryTool(
-        tool_id, name, server_id, transport, origin, digest, portability, reconstruction
+        tool_id, name, server_id, transport, origin, digest, portability, reconstruction, backend
     )
 
 
