@@ -1,6 +1,6 @@
 # Vendor exit evidence
 
-Suite 0.2.0b2 | Rubric 2
+Suite 0.2.0b3 | Rubric 2
 Manifest SHA-256: `d56a104792ef7702377083051fb485026c070ded849ad41ddc4e14a945b918c5`
 
 Contract terms are operator-attested. This report is not legal advice.
@@ -35,7 +35,7 @@ restores memory.
 
 ## Installed components
 
-- agentforge-oss: 0.5.7 (ok)
+- agentforge-oss: 0.5.8 (ok)
 - agentpolicypack: 0.2.0b1 (ok)
 - aiauditlog: 0.2.0b2 (ok)
 - aimeter-oss: 0.2.0b1 (ok)
