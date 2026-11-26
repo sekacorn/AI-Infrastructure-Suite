@@ -8,6 +8,28 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+### Added
+- **The `tool_connectors` vector scores `tool_inventory`** (Phase 4b, suite
+  checkpoint). It takes a `tool-inventory.v1` document, optionally with the
+  operator's `tool-approvals.v1` file.
+  - The scanner derives each MCP server's hosting from its origin, and matches
+    each MCP tool to an approval by server, origin, name and definition hash.
+  - Per tool: 25 for an approved MCP tool on a local server; 50 for a hosted
+    server or an unapproved hash, with the reason naming which; 75 for a
+    vendor-only tool with a documented reconstruction path; 100 without one.
+  - **Never 0.** The worst tool sets the vector, and stale approvals are
+    counted.
+  - There is a new level, `verified (tool inventory)`, a new optional report
+    section `tools`, and a worked example in `docs/examples/tool-inventory/`.
+  - A report that does not use `tool_inventory` still validates against
+    0.2.0b3's schema; a snapshot test pins this.
+- **`tool-inventory.v1`**: JSON Schema, bounded strict reader
+  (`ai_infrastructure_suite.tool_inventory`) and docs (`docs/tool-inventory.md`).
+- **Canonical schemas for AgentForge's MCP formats**: `tool-approvals.v1`
+  (with a reader, used for scoring), `mcp-servers.v1` and `tool-definition.v1`,
+  with fixtures in `docs/examples/mcp-tools/`. AgentForge's `suite-contract`
+  job validates what it writes against these copies.
+
 ## [0.2.0b3] - 2026-11-25
 
 Phase 4a, the reader side of portable memory: the `memory` vector can now be

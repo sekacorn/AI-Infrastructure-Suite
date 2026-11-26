@@ -1,0 +1,183 @@
+{
+  "schema_version": "exit-report.v2",
+  "rubric_version": "2",
+  "suite_version": "0.2.0b3",
+  "manifest_sha256": "fd70decdaff77a75fa9f9e1a1f7a7dd513e3c52306f491cfa0078df88603a014",
+  "vectors": {
+    "policies": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "prompts": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "embeddings": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "fine_tunes": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "memory": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "audit_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "cost_history": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "tool_connectors": {
+      "state": "tool_inventory",
+      "score": 75,
+      "verification_level": "verified (tool inventory)",
+      "reason": "Worst of 4 tool(s): billing_export scores 75. Vendor-only tool with a documented reconstruction path (attested). 1 approval(s) name tools the inventory does not list. Attested, not re-run: that the inventory lists every tool, that any tool works, that an MCP server is self-hostable, that a documented reconstruction path works, that tool descriptions are benign.",
+      "path": "tool-inventory.json",
+      "sha256": "1b9d30300103043f7337fcb80e6a2c9b0912ff2fbf05181f5700405d1d091bbb",
+      "attested_claims": [
+        "that the inventory lists every tool",
+        "that any tool works",
+        "that an MCP server is self-hostable",
+        "that a documented reconstruction path works",
+        "that tool descriptions are benign"
+      ],
+      "stale_approvals": 1,
+      "approvals": {
+        "path": "tool-approvals.json",
+        "sha256": "8857a379b08c2897defa1c10e2cfa5a4762f9999f59df607bd4b916cb90aed35"
+      }
+    },
+    "identities": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "ontology": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "contract_terms": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    },
+    "model_providers": {
+      "state": "unknown",
+      "score": 100,
+      "verification_level": "unverified",
+      "reason": "No evidence supplied."
+    }
+  },
+  "components": {
+    "agentforge-oss": {
+      "version": "0.5.9",
+      "status": "ok"
+    },
+    "agentpolicypack": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "aiauditlog": {
+      "version": "0.2.0b2",
+      "status": "ok"
+    },
+    "aimeter-oss": {
+      "version": "0.2.0b1",
+      "status": "ok"
+    },
+    "modelswapbench": {
+      "version": null,
+      "status": "optional"
+    },
+    "openontologylite": {
+      "version": "0.2.0b3",
+      "status": "ok"
+    },
+    "privateaistack": {
+      "version": null,
+      "status": "optional"
+    }
+  },
+  "legal_notice": "Contract terms are operator-attested. This report is not legal advice.",
+  "tools": [
+    {
+      "tool_id": "files__search",
+      "server_id": "files",
+      "name": "search",
+      "transport": "mcp_streamable_http",
+      "server_origin": "http://127.0.0.1:8765",
+      "hosting": "local",
+      "portability": "mcp",
+      "reconstruction": null,
+      "definition_sha256": "0fd51c430bff67af9f809eb8d94565f0db9b3a2dc283b09c8120d2baeec31a35",
+      "approval": "approved",
+      "score": 25,
+      "reason": "MCP tool with an approved definition hash on a local mcp_streamable_http server."
+    },
+    {
+      "tool_id": "files__count",
+      "server_id": "files",
+      "name": "count",
+      "transport": "mcp_streamable_http",
+      "server_origin": "http://127.0.0.1:8765",
+      "hosting": "local",
+      "portability": "mcp",
+      "reconstruction": null,
+      "definition_sha256": "af9c373da6577b859d5aee5656111d3ebb0a3139053f576fec5dedd04302417d",
+      "approval": "approved",
+      "score": 25,
+      "reason": "MCP tool with an approved definition hash on a local mcp_streamable_http server."
+    },
+    {
+      "tool_id": "crm__lookup",
+      "server_id": "crm",
+      "name": "lookup",
+      "transport": "mcp_streamable_http",
+      "server_origin": "https://mcp.crm.example.com",
+      "hosting": "hosted",
+      "portability": "mcp",
+      "reconstruction": null,
+      "definition_sha256": "4a72ea08cec590f9609a25efdd2011d212b31162d3a94c30706c65ed749fc5a6",
+      "approval": "approved",
+      "score": 50,
+      "reason": "MCP tool; not 25 because its MCP server is hosted (derived from the origin)."
+    },
+    {
+      "tool_id": "billing_export",
+      "server_id": "billing",
+      "name": "billing_export",
+      "transport": "in_process",
+      "server_origin": null,
+      "hosting": "local",
+      "portability": "vendor_only",
+      "reconstruction": "documented",
+      "definition_sha256": null,
+      "approval": "not_applicable",
+      "score": 75,
+      "reason": "Vendor-only tool with a documented reconstruction path (attested)."
+    }
+  ]
+}
