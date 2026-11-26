@@ -1,6 +1,6 @@
 # Vendor exit evidence
 
-Suite 0.2.0b3 | Rubric 2
+Suite 0.2.0b4 | Rubric 2
 Manifest SHA-256: `c52d9f56e89c3ebb9d09d298604d843409ca4cf7296e339f7a72c23bc4f2e3ba`
 
 Contract terms are operator-attested. This report is not legal advice.

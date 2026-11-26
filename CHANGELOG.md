@@ -8,6 +8,19 @@ Versioning follows [Semantic Versioning](https://semver.org/) with PEP 440 pre-r
 
 ## [Unreleased]
 
+## [0.2.0b4] - 2026-11-26
+
+Phase 4b, the reader side of MCP tool connectors: the `tool_connectors` vector
+can now be scored from a `tool-inventory.v1` document (`tool_inventory`), with
+a new verification level, `verified (tool inventory)`. Every tool declares the
+backend it depends on, and a vendor-only backend scores 75 or 100 whatever its
+MCP interface, approval or hosting. The suite now owns the canonical schemas
+for `tool-approvals.v1`, `mcp-servers.v1` and `tool-definition.v1`. It is
+released before agentforge-oss 0.5.10, the first writer, so readers ship before
+writers. The other vectors, their scores and the report shape are unchanged; a
+report that does not use `tool_inventory` still validates against 0.2.0b3's
+schema. No component floor changes.
+
 ### Added
 - **The `tool_connectors` vector scores `tool_inventory`** (Phase 4b, suite
   checkpoint). It takes a `tool-inventory.v1` document, optionally with the
